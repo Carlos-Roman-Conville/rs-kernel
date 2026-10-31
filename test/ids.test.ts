@@ -44,4 +44,35 @@ describe('identifiers', () => {
       expect(() => unqualify(id)).toThrow('qualified id must have the form engine/local id')
     }
   })
+
+  it('qualified ids from two engines never collide', () => {
+    let settlementCounters: Counters = {}
+    let first = mint(settlementCounters, 'org')
+    settlementCounters = first.counters
+    let second = mint(settlementCounters, 'org')
+    const settlementLocal = [first.id, second.id]
+
+    let economyCounters: Counters = {}
+    first = mint(economyCounters, 'org')
+    economyCounters = first.counters
+    second = mint(economyCounters, 'org')
+    const economyLocal = [first.id, second.id]
+
+    expect(settlementLocal).toEqual(['org.0001', 'org.0002'])
+    expect(economyLocal).toEqual(['org.0001', 'org.0002'])
+    expect(settlementLocal).toEqual(economyLocal)
+
+    const qualified = [
+      qualify('settlement', settlementLocal[0]),
+      qualify('settlement', settlementLocal[1]),
+      qualify('economy', economyLocal[0]),
+      qualify('economy', economyLocal[1]),
+    ]
+    expect(new Set(qualified).size).toBe(4)
+
+    expect(unqualify(qualified[0])).toEqual({ engine: 'settlement', id: 'org.0001' })
+    expect(unqualify(qualified[1])).toEqual({ engine: 'settlement', id: 'org.0002' })
+    expect(unqualify(qualified[2])).toEqual({ engine: 'economy', id: 'org.0001' })
+    expect(unqualify(qualified[3])).toEqual({ engine: 'economy', id: 'org.0002' })
+  })
 })
