@@ -184,6 +184,71 @@ describe('checkRegistry', () => {
 })
 
 
+describe('port directions', () => {
+  const fixture = (): RegistryData => ({
+    mechanisms: ['writer', 'caller'].map(id => ({ id, kind: 'mechanism', status: 'built', vv: { integrated: true } })),
+    quantities: [{ id: 'q', unit: 'kg', writer: 'writer' }],
+  })
+  const port = (direction?: string, mechanism = 'caller'): Declaration => ({
+    file: 'consumer.json', ports: [{ mechanism, quantity: 'q', unit: 'kg', ...(direction === undefined ? {} : { direction }) }],
+  })
+  const pair = 'warning: writer -> caller via q: connected with no named integration test'
+
+  it.each(['in', 'input', 'out', 'output', 'call', undefined])('accepts direction %s', direction => {
+    expect(checkRegistry(fixture(), [port(direction, 'writer')])).toEqual([])
+  })
+
+  it.each(['both', '', 'CALL'])('rejects unknown direction %s', direction => {
+    expect(checkRegistry(fixture(), [port(direction)])).toEqual([
+      `consumer.json: port caller/q has unknown direction ${JSON.stringify(direction)}`,
+    ])
+  })
+
+  it.each(['in', 'input', 'call', undefined])('treats %s as a reader of a provider-owned quantity', direction => {
+    const r = fixture()
+    const d = port(direction)
+    expect(checkRegistry(r, [d])).toEqual([])
+    expect(checkWarnings(r, [d])).toEqual([pair])
+    r.mechanisms[0].vv!.record = { integration_tested_with: ['caller'], integration_tests: ['provider.test'] }
+    expect(checkWarnings(r, [d])).toEqual([])
+  })
+
+  it.each(['out', 'output'])('checks ownership for %s and never connects it as a reader', direction => {
+    expect(checkRegistry(fixture(), [port(direction)])).toEqual([
+      'consumer.json: port caller/q writes but its writer is writer',
+    ])
+    expect(checkWarnings(fixture(), [port(direction)])).toEqual([])
+  })
+
+  it.each(['in', 'call'])('checks mechanism, quantity, kind and dimension for %s', direction => {
+    const r = fixture()
+    const d = port(direction)
+    d.ports![0].mechanism = 'missing'
+    expect(checkRegistry(r, [d])).toEqual(['consumer.json: port q names mechanism missing with no built row'])
+    d.ports![0].mechanism = 'caller'
+    d.ports![0].quantity = 'absent'
+    expect(checkRegistry(r, [d])).toEqual(['consumer.json: port caller uses quantity absent absent from quantities.json'])
+    d.ports![0].quantity = 'q'
+    d.ports![0].kind = 'record'
+    d.ports![0].unit = null
+    expect(checkRegistry(r, [d])).toEqual(['consumer.json: port caller/q kind record differs from the quantity kind quantity'])
+    delete d.ports![0].kind
+    d.ports![0].unit = 's'
+    expect(checkRegistry(r, [d])).toEqual(['consumer.json: port caller/q unit s differs in dimension from the quantity unit kg'])
+    d.ports![0].unit = 'g'
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  it('does not count call ports as writes across declarations', () => {
+    const output = port('out', 'writer')
+    output.file = 'provider.json'
+    expect(checkRegistry(fixture(), [output, port('call')])).toEqual([])
+    expect(checkRegistry(fixture(), [output, port('out', 'writer')])).toEqual([
+      'q: written by multiple declarations: consumer.json, provider.json',
+    ])
+  })
+})
+
 describe('host inputs', () => {
   const fixture = (writer: string | null, written_by?: string | null): RegistryData => ({
     mechanisms: [{ id: 'a', kind: 'mechanism', status: 'built', vv: { integrated: true } }],

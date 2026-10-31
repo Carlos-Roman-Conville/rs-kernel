@@ -156,6 +156,9 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
     for (const port of d.ports ?? []) {
       const q = resolve(port.quantity)
       used.add(q)
+      if (port.direction !== undefined && !['in', 'input', 'out', 'output', 'call'].includes(port.direction)) {
+        failures.push(`${where}: port ${port.mechanism}/${q} has unknown direction ${JSON.stringify(port.direction)}`)
+      }
       if (port.direction === 'out' || port.direction === 'output') {
         recordWrite(q, d)
         const quantity = quantities.get(q)
