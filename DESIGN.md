@@ -385,6 +385,11 @@ Questions sent 2026-10-30 to Reality & Species, Settlement, Economy and the regi
   transactions, RNG streams against realism's generator, units parsing and conversion, ports, resolution round-trip,
   compaction, the check script's fixtures, the import fence), and as validation the no-silent-change goldens
   (2613, 2614, checked by every adoption Gate and by 2615).
+- **Landed 2026-10-31 (unit 2718, kernel 8ecb925):** `checkWarnings()`; the CLI prints `warning: ` lines and exits 1 only on
+  failures. "Marked integrated" = `vv.integrated === true` or a string starting `yes` (agreed with the registry keeper,
+  who writes `yes (kernel ports, <commit>, <date>)`). On settlement, economy and realism today: no port warnings (they
+  declare no ports) and 7 connected pairs with no named integration test, all in economy (`economy.market.five_numbers`
+  to six readers via `economy.market_state`; `economy.price.rule` to `economy.market.observed_production` via `economy.price`).
 
 ## 13. Open items
 
