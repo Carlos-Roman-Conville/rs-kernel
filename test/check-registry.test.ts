@@ -5,7 +5,7 @@ import aliases from './fixtures/registry/aliases.json' with { type: 'json' }
 import kernel from './fixtures/registry/kernel.json' with { type: 'json' }
 import unrelated from './fixtures/registry/unrelated.json' with { type: 'json' }
 import retired from './fixtures/registry/retired.json' with { type: 'json' }
-import { checkRegistry, type Declaration, type RegistryData } from '../scripts/check-registry.ts'
+import { checkRegistry, checkWarnings, type Declaration, type RegistryData } from '../scripts/check-registry.ts'
 
 const registry = (): RegistryData => structuredClone({
   mechanisms: mechanisms.mechanisms, quantities: quantities.quantities, aliases: aliases.aliases,
@@ -180,5 +180,147 @@ describe('checkRegistry', () => {
     const d = declaration()
     d.ports![0].unit = 'K'
     expect(checkRegistry(registry(), [d])).toEqual([])
+  })
+})
+
+
+describe('checkWarnings', () => {
+  const fixture = (): RegistryData => ({
+    mechanisms: [
+      { id: 'a', kind: 'mechanism', status: 'built' },
+      { id: 'b', kind: 'mechanism', status: 'built' },
+    ],
+    quantities: [{ id: 'q', unit: '1', writer: 'a' }],
+  })
+  const reading = (): Declaration => ({ file: 'reader.json', processes: [{ id: 'read', mechanisms: ['b'], reads: ['q'] }] })
+  const pair = 'warning: a -> b via q: connected with no named integration test'
+
+  it.each(['no (not built)', 'n/a (restatement)', 'plugin (outside the registry ports)', 'by convention', false, ''])('warns once per mechanism per file when integrated is %s', integrated => {
+    const r = fixture()
+    r.mechanisms[0].vv = { integrated }
+    r.quantities!.push({ id: 'r', unit: '1', writer: 'a' })
+    const d: Declaration = { file: 'ports.json', ports: [
+      { mechanism: 'a', quantity: 'q', unit: '1' },
+      { mechanism: 'a', quantity: 'r', unit: '1', direction: 'in' },
+    ] }
+    const other = { ...d, file: 'other.json' }
+    expect(checkWarnings(r, [d, d, other])).toEqual(['other.json', 'ports.json'].map(file =>
+      `warning: ${file}: port a/q is wired but a is not marked integrated (vv.integrated: ${JSON.stringify(integrated)})`))
+    expect(checkRegistry(r, [d, other])).toEqual([])
+  })
+
+  it.each([true, 'yes (kernel ports, 2026-11-01)', '  YeS  '])('does not warn for an integrated port (%s)', integrated => {
+    const r = fixture()
+    r.mechanisms[0].vv = { integrated }
+    const d: Declaration = { file: 'ports.json', ports: [{ mechanism: 'a', quantity: 'q', unit: '1', direction: 'output' }] }
+    expect(checkWarnings(r, [d])).toEqual([])
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  it('treats missing vv as not integrated and untested without adding failures', () => {
+    const r = fixture()
+    const d = reading()
+    d.ports = [{ mechanism: 'b', quantity: 'q', unit: '1' }]
+    expect(checkWarnings(r, [d])).toEqual([pair,
+      'warning: reader.json: port b/q is wired but b is not marked integrated (vv.integrated: "")'])
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  it.each([0, 1])('accepts named integration evidence from side %s only when both lists match', side => {
+    const r = fixture()
+    const d = reading()
+    expect(checkWarnings(r, [d])).toEqual([pair])
+    r.mechanisms[side].vv = { record: { integration_tested_with: [side === 0 ? 'b' : 'a'], integration_tests: [] } }
+    expect(checkWarnings(r, [d])).toEqual([pair])
+    r.mechanisms[side].vv!.record!.integration_tests = ['integration.test']
+    expect(checkWarnings(r, [d])).toEqual([])
+    r.mechanisms[side].vv!.record!.integration_tested_with = ['unrelated']
+    expect(checkWarnings(r, [d])).toEqual([pair])
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  it('combines quantities in sorted order and de-duplicates repeated connections', () => {
+    const r = fixture()
+    r.quantities!.unshift({ id: 'z', unit: '1', writer: 'a' })
+    r.mechanisms[0].writes = ['z', 'q', 'q']
+    r.mechanisms[1].reads = ['z', 'q']
+    const d = reading()
+    d.processes![0].reads = ['z', 'q', 'q']
+    expect(checkWarnings(r, [d, d])).toEqual(['warning: a -> b via q,z: connected with no named integration test'])
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  it.each(['processes', 'ports', 'streams'] as const)('scopes pairs to either endpoint named by %s', source => {
+    const r = fixture()
+    r.mechanisms[1].reads = ['q']
+    expect(checkWarnings(r, [])).toEqual([])
+    expect(checkWarnings(r, [], { all: true })).toEqual([pair])
+    for (const m of ['a', 'b']) {
+      r.mechanisms.forEach(row => { row.vv = { integrated: true } })
+      const d: Declaration = { file: 'scope.json' }
+      if (source === 'processes') d.processes = [{ id: 'p', mechanisms: [m] }]
+      if (source === 'ports') d.ports = [{ mechanism: m, quantity: 'q', unit: '1' }]
+      if (source === 'streams') d.streams = [m]
+      expect(checkWarnings(r, [d])).toEqual([pair])
+      expect(checkRegistry(r, [d])).toEqual([])
+    }
+    expect(checkRegistry(r, [], { all: true })).toEqual([])
+  })
+
+  it.each(['planned', 'retired', 'restated'])('ignores %s mechanisms even when declared or connected', status => {
+    const r = fixture()
+    r.mechanisms[1].status = status
+    r.mechanisms[1].writes = ['q']
+    r.mechanisms[1].reads = ['q']
+    const d = reading()
+    d.ports = [{ mechanism: 'b', quantity: 'q', unit: '1' }]
+    expect(checkWarnings(r, [d], { all: true })).toEqual([])
+  })
+
+  it('ignores non-mechanism rows', () => {
+    const r = fixture()
+    r.mechanisms[1].kind = 'restatement'
+    r.mechanisms[1].reads = ['q']
+    expect(checkWarnings(r, [reading()], { all: true })).toEqual([])
+  })
+
+  it('resolves aliases for both endpoints, quantities and coverage while skipping retired rows', () => {
+    const r = fixture()
+    r.aliases = [{ old: 'old-a', new: 'a' }, { old: 'old-b', new: 'b' }, { old: 'old-q', new: 'q' }]
+    r.quantities![0].writer = 'old-a'
+    r.quantities!.push({ id: 'old-q', status: 'retired', unit: '1', writer: 'b' })
+    r.mechanisms.push({ id: 'old-a', kind: 'mechanism', status: 'retired', reads: ['q'], writes: ['q'] })
+    r.mechanisms[0].writes = ['old-q']
+    const d: Declaration = { file: 'alias.json', processes: [{ id: 'p', mechanisms: ['old-b'], reads: ['old-q'] }],
+      ports: [{ mechanism: 'old-a', quantity: 'old-q', unit: '1', direction: 'out' }] }
+    expect(checkWarnings(r, [d])).toEqual([pair,
+      'warning: alias.json: port a/q is wired but a is not marked integrated (vv.integrated: "")'])
+    r.mechanisms[0].vv = { integrated: true, record: { integration_tested_with: ['old-b'], integration_tests: ['test'] } }
+    expect(checkWarnings(r, [d])).toEqual([])
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  for (const writer of ['quantity', 'process', 'out', 'output', 'row']) {
+    it.each(['process', 'in', 'input', undefined, 'row'])(`connects a ${writer} writer to a %s reader`, reader => {
+      const r = fixture()
+      r.quantities![0].writer = writer === 'quantity' ? 'a' : null
+      r.mechanisms.forEach(row => { row.vv = { integrated: true } })
+      const d: Declaration = { file: 'sources.json', processes: [], ports: [] }
+      if (writer === 'process') d.processes!.push({ id: 'write', mechanisms: ['a'], writes: ['q'] })
+      if (writer === 'out' || writer === 'output') d.ports!.push({ mechanism: 'a', quantity: 'q', unit: '1', direction: writer })
+      if (writer === 'row') r.mechanisms[0].writes = ['q']
+      if (reader === 'process') d.processes!.push({ id: 'read', mechanisms: ['b'], reads: ['q'] })
+      else if (reader === 'row') r.mechanisms[1].reads = ['q']
+      else d.ports!.push({ mechanism: 'b', quantity: 'q', unit: '1', direction: reader })
+      expect(checkWarnings(r, [d], { all: true })).toEqual([pair])
+      r.mechanisms[1].status = 'planned'
+      expect(checkWarnings(r, [d], { all: true })).toEqual([])
+    })
+  }
+
+  it('does not pair a mechanism with itself and tolerates absent optional collections', () => {
+    const r: RegistryData = { mechanisms: [{ id: 'a', kind: 'mechanism', status: 'built', reads: ['q'], writes: ['q'] }] }
+    expect(checkWarnings(r, [{ file: 'empty.json' }], { all: true })).toEqual([])
+    expect(checkWarnings({ mechanisms: [] }, [])).toEqual([])
   })
 })

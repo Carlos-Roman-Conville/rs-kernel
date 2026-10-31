@@ -6,6 +6,12 @@ export interface MechanismRow {
   status?: string
   writes?: string[]
   reads?: string[]
+  vv?: {
+    implemented?: boolean
+    integrated?: boolean | string
+    validated?: string
+    record?: { integration_tested_with?: string[], integration_tests?: string[] }
+  }
   aggregates?: { of?: string, by?: string, interface?: string, test?: string } | null
 }
 export type QuantityKind = 'quantity' | 'categorical' | 'record' | 'text'
@@ -47,9 +53,7 @@ function dimensionOf(unit: string | null | undefined): string | null {
   return parse(unit === 'unitless' ? '1' : unit as string).dim.join(',')
 }
 
-/** Returns one line per failure; empty when the declarations agree with the registry. */
-export function checkRegistry(registry: RegistryData, declarations: Declaration[], options: { all?: boolean } = {}): string[] {
-  const failures: string[] = []
+function registryIndex(registry: RegistryData, failures: string[] = []) {
   const aliasOf = new Map((registry.aliases ?? []).map(a => [a.old, a.new]))
   const resolve = (id: string): string => {
     const seen = new Set<string>()
@@ -70,6 +74,13 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
   }
   const rows = index(registry.mechanisms.filter(row => row.kind === 'mechanism' && row.status === 'built'), 'mechanism')
   const quantities = index(registry.quantities ?? [], 'quantity')
+  return { resolve, rows, quantities }
+}
+
+/** Returns one line per failure; empty when the declarations agree with the registry. */
+export function checkRegistry(registry: RegistryData, declarations: Declaration[], options: { all?: boolean } = {}): string[] {
+  const failures: string[] = []
+  const { resolve, rows, quantities } = registryIndex(registry, failures)
   const hasMechanism = (id: string) => rows.has(resolve(id))
   const used = new Set<string>()
   const named = new Set<string>()
@@ -183,6 +194,71 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
   return failures
 }
 
+/** Advisory V&V gaps; these never contribute to registry failures. */
+export function checkWarnings(registry: RegistryData, declarations: Declaration[], options: { all?: boolean } = {}): string[] {
+  const { resolve, rows, quantities } = registryIndex(registry)
+  const warnings = new Set<string>()
+  const named = new Set<string>()
+  const wired = new Map<string, Set<string>>()
+  const writers = new Map<string, Set<string>>()
+  const readers = new Map<string, Set<string>>()
+  const connect = (index: Map<string, Set<string>>, quantity: string, mechanism: string) => {
+    const m = resolve(mechanism)
+    if (!rows.has(m)) return
+    const q = resolve(quantity)
+    if (!index.has(q)) index.set(q, new Set())
+    index.get(q)!.add(m)
+  }
+  for (const [q, row] of quantities) {
+    if (row.writer !== null) connect(writers, q, row.writer)
+  }
+  for (const [m, row] of rows) {
+    for (const q of row.writes ?? []) connect(writers, q, m)
+    for (const q of row.reads ?? []) connect(readers, q, m)
+  }
+  for (const d of declarations) {
+    for (const p of d.processes ?? []) {
+      for (const m of p.mechanisms) {
+        named.add(resolve(m))
+        for (const q of p.writes ?? []) connect(writers, q, m)
+        for (const q of p.reads ?? []) connect(readers, q, m)
+      }
+    }
+    for (const m of d.streams ?? []) named.add(resolve(m))
+    if (!wired.has(d.file)) wired.set(d.file, new Set())
+    for (const p of d.ports ?? []) {
+      const m = resolve(p.mechanism)
+      const q = resolve(p.quantity)
+      named.add(m)
+      connect(p.direction === 'out' || p.direction === 'output' ? writers : readers, q, m)
+      const row = rows.get(m)
+      if (!row || wired.get(d.file)!.has(m)) continue
+      wired.get(d.file)!.add(m)
+      const integrated = row.vv?.integrated ?? ''
+      if (integrated === true || (typeof integrated === 'string' && integrated.trim().toLowerCase().startsWith('yes'))) continue
+      warnings.add(`warning: ${d.file}: port ${m}/${q} is wired but ${m} is not marked integrated (vv.integrated: ${JSON.stringify(integrated)})`)
+    }
+  }
+  const covers = (a: string, b: string) => {
+    const record = rows.get(a)!.vv?.record
+    return !!record?.integration_tests?.length && (record.integration_tested_with ?? []).some(m => resolve(m) === b)
+  }
+  const pairs = new Map<string, Map<string, Set<string>>>()
+  for (const [q, sources] of writers) {
+    for (const a of sources) for (const b of readers.get(q) ?? []) {
+      if (a === b || (!options.all && !named.has(a) && !named.has(b)) || covers(a, b) || covers(b, a)) continue
+      if (!pairs.has(a)) pairs.set(a, new Map())
+      const targets = pairs.get(a)!
+      if (!targets.has(b)) targets.set(b, new Set())
+      targets.get(b)!.add(q)
+    }
+  }
+  for (const [a, targets] of pairs) for (const [b, qs] of targets) {
+    warnings.add(`warning: ${a} -> ${b} via ${[...qs].sort().join(',')}: connected with no named integration test`)
+  }
+  return [...warnings].sort()
+}
+
 if (typeof process !== 'undefined' && process.argv[1]?.endsWith('check-registry.ts')) {
   const { readFileSync, existsSync } = await import('node:fs')
   const args = process.argv.slice(2)
@@ -204,5 +280,6 @@ if (typeof process !== 'undefined' && process.argv[1]?.endsWith('check-registry.
   const declarations = files.map(file => ({ file, ...JSON.parse(readFileSync(file, 'utf8')) }) as Declaration)
   const failures = checkRegistry(registry, declarations, { all })
   for (const line of failures) console.log(line)
+  for (const line of checkWarnings(registry, declarations, { all })) console.log(line)
   process.exit(failures.length ? 1 : 0)
 }
