@@ -1,5 +1,8 @@
 # Adopting the Kernel: the edits per package (P0, Kernel keeper, 2026-10-30)
 
+**P0 closed 2026-10-31** (Kernel keeper): every adoption and acceptance unit passed; the last re-check, 2696 (pirate web
+33 files / 395 tests), passed 2026-10-30 23:59. The status line below is historical.
+
 > **Recovered file (KRN-26; Card Games ISSUES I-1047, I-1048).** On 2026-10-30 at about 22:53 a realism worktree removal
 > followed `node_modules` links into this repo and deleted its `.git` and 16 files. Rex checked Windows Previous Versions
 > (none exist) and approved a controlled reconstruction. **The previous history is lost:** 48 commits, the last 5c76edd;

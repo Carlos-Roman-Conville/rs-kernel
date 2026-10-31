@@ -1,6 +1,6 @@
 # The Kernel: design (P0, Kernel keeper, 2026-10-30)
 
-**Status: approved (Rex, 2026-10-30).** Rex approved the design with the proposed answers to K-O1, K-O2, K-O3 and K-O5 (§13); the belt units run. Every item is marked **(Rex)** = Rex's
+**Status: approved (Rex, 2026-10-30); P0 complete 2026-10-31.** Acceptance: thirty-days (2609), replay and seed (2610), registry and units (2611); per-repo re-checks settlement (2693), economy (2694), realism (2695), pirate web 33 files / 395 tests (2696, 2026-10-30 23:59), harness goldens (2697); kernel 17 files / 149 tests. The repo was rebuilt after the 2026-10-30 deletion (KRN-26, ADOPTION.md). Rex approved the design with the proposed answers to K-O1, K-O2, K-O3 and K-O5 (§13); the belt units run. Every item is marked **(Rex)** = Rex's
 decision, **proposed** = the Kernel keeper's proposal, or **open** = a question for Rex or an owner. The adoption
 edits per package are in `ADOPTION.md`; the belt units in `Games/Card Games/_agent/queue/kernel/`.
 
