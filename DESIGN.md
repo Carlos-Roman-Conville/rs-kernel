@@ -321,6 +321,41 @@ mechanisms, writes, reads, period, phase, order? }], ports: [{ mechanism, quanti
 [mechanism ids] }`, `writes`/`reads` being quantity ids. Data, not code, so the check runs without importing the
 engine. The declarations are each owner's; their first versions are adoption units; the registry mirrors them.
 
+### 8.1 Provider calls are ports (Kernel, Settlement and Economy keepers, 2026-10-31)
+
+An independent review found two integration mechanisms side by side. Reality, Life and Cognition are wired by kernel
+ports in `kernel.json`, but Settlement and Economy are wired by host-injected providers (`LabourSupply`,
+`MaterialProvider`, `UtilityProvider`, `LedgerProvider`, `SettlementReader`, `PriceProvider`). The check script could
+not see the provider edges. **Decision:** one mechanism, ports. Provider interfaces and CONTRACTS.md do not change;
+only the declarations are new.
+
+For every provider method a consumer calls, the consumer's `kernel.json` declares ports on the consumer mechanism
+that makes the call:
+
+- `direction: "in"` (alias `input`) for each quantity the method returns;
+- `direction: "call"` for each provider-owned quantity the call makes the provider change. The consumer never writes it;
+- a method that both returns a value and changes provider state (for example `LabourSupply.draw`) gets both an `in` and a
+  `call` port.
+
+The provider's `kernel.json` keeps declaring those quantities as writes of the mechanism that serves the method, so the
+provider stays the only writer. The rule applies in both directions: Settlement calls Economy's `MaterialProvider`;
+Economy calls Settlement's `LedgerProvider`, `SettlementReader` and `LabourSupply`.
+
+Where the host serves a provider (the pirate game's `portLabour`, utilities), the quantity keeps one writer in the
+registry (Reality's mechanism once built) and `written_by: "host (...)"`; the check accepts a host input as a warning,
+never a failure (unit 2738). The wage channel is declared as a `call` port of `economy.labour.wage_quote` on
+Settlement's post-wage quantity, although the pirate adapter issues `setWage`, so the edge is visible.
+
+Methods not called (for example `LabourSupply.supply` by Settlement, `PriceProvider.valueOf`, open for Rex in CONTRACTS
+§12.3) get no port.
+
+Directions are exactly `in`/`input`, `out`/`output`, `call` (missing = `in`); an unknown direction fails; a `call` port
+is checked like an `in` port, is never a write, and counts as a reader for the connected-pair warnings (§14). Unit 2766
+implements this in the check script.
+
+Settlement and Economy each add their ports in one Composer unit, once the registry keeper has the quantity ids in
+`registry/quantities.json`.
+
 ## 9. The resolution hand-off (PLATFORM §9; refinement B)
 
 PLATFORM §9: "Finer resolution refines the aggregate, never contradicts it." The Kernel owns the **protocol**, never
