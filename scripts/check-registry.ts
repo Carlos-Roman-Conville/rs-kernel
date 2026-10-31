@@ -249,16 +249,6 @@ export function checkWarnings(registry: RegistryData, declarations: Declaration[
       warnings.add(`warning: ${d.file}: port ${m}/${q} is wired but ${m} is not marked integrated (vv.integrated: ${JSON.stringify(integrated)})`)
     }
   }
-  const empty = (value: string | null | undefined) => value == null || value.trim() === ''
-  for (const [id, row] of rows) {
-    if (!options.all && !named.has(id)) continue
-    if (empty(row.rate_limiter)) warnings.add(`warning: ${id}: has no rate_limiter`)
-    if (empty(row.failure_mode)) warnings.add(`warning: ${id}: has no failure_mode`)
-    const record = row.vv?.record
-    if (record?.integration_tests?.length && empty(record.numerical?.stability)) {
-      warnings.add(`warning: ${id}: has an integration test but no numerical.stability`)
-    }
-  }
   const covers = (a: string, b: string) => {
     const record = rows.get(a)!.vv?.record
     return !!record?.integration_tests?.length && (record.integration_tested_with ?? []).some(m => resolve(m) === b)
@@ -275,6 +265,29 @@ export function checkWarnings(registry: RegistryData, declarations: Declaration[
   }
   for (const [a, targets] of pairs) for (const [b, qs] of targets) {
     warnings.add(`warning: ${a} -> ${b} via ${[...qs].sort().join(',')}: connected with no named integration test`)
+  }
+  return [...warnings].sort()
+}
+
+/** Advisory schema 4 field gaps; these never contribute to registry failures. */
+export function checkFieldWarnings(registry: RegistryData, declarations: Declaration[], options: { all?: boolean } = {}): string[] {
+  const { resolve, rows } = registryIndex(registry)
+  const warnings = new Set<string>()
+  const named = new Set<string>()
+  for (const d of declarations) {
+    for (const p of d.processes ?? []) for (const m of p.mechanisms) named.add(resolve(m))
+    for (const p of d.ports ?? []) named.add(resolve(p.mechanism))
+    for (const m of d.streams ?? []) named.add(resolve(m))
+  }
+  const empty = (value: string | null | undefined) => value == null || value.trim() === ''
+  for (const [id, row] of rows) {
+    if (!options.all && !named.has(id)) continue
+    if (empty(row.rate_limiter)) warnings.add(`warning: ${id}: has no rate_limiter`)
+    if (empty(row.failure_mode)) warnings.add(`warning: ${id}: has no failure_mode`)
+    const record = row.vv?.record
+    if (record?.integration_tests?.length && empty(record.numerical?.stability)) {
+      warnings.add(`warning: ${id}: has an integration test but no numerical.stability`)
+    }
   }
   return [...warnings].sort()
 }
@@ -301,5 +314,6 @@ if (typeof process !== 'undefined' && process.argv[1]?.endsWith('check-registry.
   const failures = checkRegistry(registry, declarations, { all })
   for (const line of failures) console.log(line)
   for (const line of checkWarnings(registry, declarations, { all })) console.log(line)
+  for (const line of checkFieldWarnings(registry, declarations, { all })) console.log(line)
   process.exit(failures.length ? 1 : 0)
 }

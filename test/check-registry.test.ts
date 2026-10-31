@@ -5,7 +5,7 @@ import aliases from './fixtures/registry/aliases.json' with { type: 'json' }
 import kernel from './fixtures/registry/kernel.json' with { type: 'json' }
 import unrelated from './fixtures/registry/unrelated.json' with { type: 'json' }
 import retired from './fixtures/registry/retired.json' with { type: 'json' }
-import { checkRegistry, checkWarnings, type Declaration, type RegistryData } from '../scripts/check-registry.ts'
+import { checkRegistry, checkWarnings, checkFieldWarnings, type Declaration, type RegistryData } from '../scripts/check-registry.ts'
 
 const registry = (): RegistryData => structuredClone({
   mechanisms: mechanisms.mechanisms, quantities: quantities.quantities, aliases: aliases.aliases,
@@ -184,14 +184,14 @@ describe('checkRegistry', () => {
 })
 
 
-describe('checkWarnings', () => {
+describe('checkFieldWarnings', () => {
   it.each([undefined, null, '', ' \t ', ' documented '])('checks schema 4 contract fields for emptiness (%s)', value => {
     const r: RegistryData = { mechanisms: [{
       id: 'a', kind: 'mechanism', status: 'built',
       ...(value === undefined ? {} : { rate_limiter: value, failure_mode: value }),
     }] }
     const d: Declaration = { file: 'schema4.json', streams: ['a'] }
-    expect(checkWarnings(r, [d])).toEqual(value === ' documented ' ? [] : [
+    expect(checkFieldWarnings(r, [d])).toEqual(value === ' documented ' ? [] : [
       'warning: a: has no failure_mode', 'warning: a: has no rate_limiter',
     ])
     expect(checkRegistry(r, [d])).toEqual([])
@@ -204,7 +204,7 @@ describe('checkWarnings', () => {
         vv: { record: { integration_tests, ...(stability === undefined ? {} : { numerical: { stability } }) } },
       }] }
       const d: Declaration = { file: 'schema4.json', streams: ['a'] }
-      expect(checkWarnings(r, [d])).toEqual(integration_tests?.length && stability !== ' stable ' ? [
+      expect(checkFieldWarnings(r, [d])).toEqual(integration_tests?.length && stability !== ' stable ' ? [
         'warning: a: has an integration test but no numerical.stability',
       ] : [])
       expect(checkRegistry(r, [d])).toEqual([])
@@ -227,9 +227,9 @@ describe('checkWarnings', () => {
       `warning: ${id}: has no failure_mode`,
       `warning: ${id}: has no rate_limiter`,
     ]
-    expect(checkWarnings(r, [])).toEqual([])
-    expect(checkWarnings(r, [d, d])).toEqual(lines('z'))
-    expect(checkWarnings(r, [d, d], { all: true })).toEqual([...lines('a'), ...lines('z')])
+    expect(checkFieldWarnings(r, [])).toEqual([])
+    expect(checkFieldWarnings(r, [d, d])).toEqual(lines('z'))
+    expect(checkFieldWarnings(r, [d, d], { all: true })).toEqual([...lines('a'), ...lines('z')])
     expect(checkRegistry(r, [d])).toEqual([])
     expect(checkRegistry(r, [d], { all: true })).toEqual([])
   })
@@ -241,10 +241,13 @@ describe('checkWarnings', () => {
   ])('ignores schema 4 gaps for $kind/$status rows', fields => {
     const r: RegistryData = { mechanisms: [{ id: 'a', ...fields,
       vv: { record: { integration_tests: ['test'] } } }] }
-    expect(checkWarnings(r, [{ file: 'schema4.json', streams: ['a'] }], { all: true })).toEqual([])
+    expect(checkFieldWarnings(r, [{ file: 'schema4.json', streams: ['a'] }], { all: true })).toEqual([])
     expect(checkRegistry(r, [], { all: true })).toEqual([])
   })
 
+})
+
+describe('checkWarnings', () => {
   const fixture = (): RegistryData => ({
     mechanisms: [
       { id: 'a', kind: 'mechanism', status: 'built' },
