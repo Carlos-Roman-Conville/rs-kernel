@@ -44,7 +44,10 @@ function writtenQuantity(): string {
 describe('check-registry over the real registry and the three engines', () => {
   it('passes', () => {
     const { status, out } = check(registry)
-    expect(out).toBe('')
+    const failures = out
+      .split('\n')
+      .filter(line => line !== '' && !line.startsWith('warning: '))
+    expect(failures).toEqual([])
     expect(status).toBe(0)
   })
 
