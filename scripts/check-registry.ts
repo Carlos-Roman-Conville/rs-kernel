@@ -6,11 +6,21 @@ export interface MechanismRow {
   status?: string
   writes?: string[]
   reads?: string[]
+  rate_limiter?: string | null
+  failure_mode?: string | null
   vv?: {
     implemented?: boolean
     integrated?: boolean | string
     validated?: string
-    record?: { integration_tested_with?: string[], integration_tests?: string[] }
+    record?: {
+      integration_tested_with?: string[]
+      integration_tests?: string[]
+      numerical?: {
+        stability?: string | null
+        coupled_update_consistency?: string | null
+        sensitivity?: string | null
+      }
+    }
   }
   aggregates?: { of?: string, by?: string, interface?: string, test?: string } | null
 }
@@ -237,6 +247,16 @@ export function checkWarnings(registry: RegistryData, declarations: Declaration[
       const integrated = row.vv?.integrated ?? ''
       if (integrated === true || (typeof integrated === 'string' && integrated.trim().toLowerCase().startsWith('yes'))) continue
       warnings.add(`warning: ${d.file}: port ${m}/${q} is wired but ${m} is not marked integrated (vv.integrated: ${JSON.stringify(integrated)})`)
+    }
+  }
+  const empty = (value: string | null | undefined) => value == null || value.trim() === ''
+  for (const [id, row] of rows) {
+    if (!options.all && !named.has(id)) continue
+    if (empty(row.rate_limiter)) warnings.add(`warning: ${id}: has no rate_limiter`)
+    if (empty(row.failure_mode)) warnings.add(`warning: ${id}: has no failure_mode`)
+    const record = row.vv?.record
+    if (record?.integration_tests?.length && empty(record.numerical?.stability)) {
+      warnings.add(`warning: ${id}: has an integration test but no numerical.stability`)
     }
   }
   const covers = (a: string, b: string) => {

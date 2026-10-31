@@ -185,6 +185,66 @@ describe('checkRegistry', () => {
 
 
 describe('checkWarnings', () => {
+  it.each([undefined, null, '', ' \t ', ' documented '])('checks schema 4 contract fields for emptiness (%s)', value => {
+    const r: RegistryData = { mechanisms: [{
+      id: 'a', kind: 'mechanism', status: 'built',
+      ...(value === undefined ? {} : { rate_limiter: value, failure_mode: value }),
+    }] }
+    const d: Declaration = { file: 'schema4.json', streams: ['a'] }
+    expect(checkWarnings(r, [d])).toEqual(value === ' documented ' ? [] : [
+      'warning: a: has no failure_mode', 'warning: a: has no rate_limiter',
+    ])
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  for (const integration_tests of [undefined, [], ['integration.test']]) {
+    it.each([undefined, null, '', ' \t ', ' stable '])(`checks schema 4 stability only with integration evidence (${JSON.stringify(integration_tests)}, %s)`, stability => {
+      const r: RegistryData = { mechanisms: [{
+        id: 'a', kind: 'mechanism', status: 'built', rate_limiter: 'capacity', failure_mode: 'overload',
+        vv: { record: { integration_tests, ...(stability === undefined ? {} : { numerical: { stability } }) } },
+      }] }
+      const d: Declaration = { file: 'schema4.json', streams: ['a'] }
+      expect(checkWarnings(r, [d])).toEqual(integration_tests?.length && stability !== ' stable ' ? [
+        'warning: a: has an integration test but no numerical.stability',
+      ] : [])
+      expect(checkRegistry(r, [d])).toEqual([])
+    })
+  }
+
+  it.each(['processes', 'ports', 'streams'] as const)('scopes schema 4 warnings by %s, resolving aliases and sorting unique lines', source => {
+    const r: RegistryData = {
+      mechanisms: ['z', 'a'].map(id => ({ id, kind: 'mechanism', status: 'built',
+        vv: { integrated: true, record: { integration_tests: ['test'], numerical: {} } } })),
+      aliases: [{ old: 'old-z', new: 'z' }],
+      quantities: [{ id: 'q', unit: '1', writer: 'z' }],
+    }
+    const d: Declaration = { file: 'schema4.json' }
+    if (source === 'processes') d.processes = [{ id: 'p', mechanisms: ['old-z', 'z'] }]
+    if (source === 'ports') d.ports = [{ mechanism: 'old-z', quantity: 'q', unit: '1' }]
+    if (source === 'streams') d.streams = ['old-z', 'z']
+    const lines = (id: string) => [
+      `warning: ${id}: has an integration test but no numerical.stability`,
+      `warning: ${id}: has no failure_mode`,
+      `warning: ${id}: has no rate_limiter`,
+    ]
+    expect(checkWarnings(r, [])).toEqual([])
+    expect(checkWarnings(r, [d, d])).toEqual(lines('z'))
+    expect(checkWarnings(r, [d, d], { all: true })).toEqual([...lines('a'), ...lines('z')])
+    expect(checkRegistry(r, [d])).toEqual([])
+    expect(checkRegistry(r, [d], { all: true })).toEqual([])
+  })
+
+  it.each([
+    { kind: 'mechanism', status: 'planned' },
+    { kind: 'mechanism', status: 'retired' },
+    { kind: 'restatement', status: 'built' },
+  ])('ignores schema 4 gaps for $kind/$status rows', fields => {
+    const r: RegistryData = { mechanisms: [{ id: 'a', ...fields,
+      vv: { record: { integration_tests: ['test'] } } }] }
+    expect(checkWarnings(r, [{ file: 'schema4.json', streams: ['a'] }], { all: true })).toEqual([])
+    expect(checkRegistry(r, [], { all: true })).toEqual([])
+  })
+
   const fixture = (): RegistryData => ({
     mechanisms: [
       { id: 'a', kind: 'mechanism', status: 'built' },
