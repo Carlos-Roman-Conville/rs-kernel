@@ -25,7 +25,7 @@ export interface MechanismRow {
   aggregates?: { of?: string, by?: string, interface?: string, test?: string } | null
 }
 export type QuantityKind = 'quantity' | 'categorical' | 'record' | 'text'
-export interface Quantity { id: string, kind?: QuantityKind, status?: string, unit: string | null, writer: string | null }
+export interface Quantity { id: string, kind?: QuantityKind, status?: string, unit: string | null, writer: string | null, written_by?: string | null }
 export interface Alias { old: string, new: string }
 export interface Declaration {
   /** Label used in failure lines, usually the kernel.json path. */
@@ -42,6 +42,10 @@ export interface RegistryData {
 
 function kindOf(row: { kind?: QuantityKind }): QuantityKind {
   return row.kind === undefined ? 'quantity' : row.kind
+}
+
+function isHostInput(quantity: Quantity): boolean {
+  return quantity.written_by?.trim().toLowerCase().startsWith('host') ?? false
 }
 
 function valueError(row: { kind?: QuantityKind, unit: string | null }): string | null {
@@ -195,7 +199,7 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
   for (const q of [...used].sort()) {
     const quantity = quantities.get(q)
     if (!quantity) continue
-    if (!options.all && (quantity.writer === null || !hasMechanism(quantity.writer))) {
+    if (!options.all && (quantity.writer === null || !hasMechanism(quantity.writer)) && !isHostInput(quantity)) {
       failures.push(`${q}: writer ${quantity.writer ?? 'null'} has no built row`)
     }
     const error = valueError(quantity)
@@ -209,6 +213,7 @@ export function checkWarnings(registry: RegistryData, declarations: Declaration[
   const { resolve, rows, quantities } = registryIndex(registry)
   const warnings = new Set<string>()
   const named = new Set<string>()
+  const used = new Set<string>()
   const wired = new Map<string, Set<string>>()
   const writers = new Map<string, Set<string>>()
   const readers = new Map<string, Set<string>>()
@@ -223,11 +228,13 @@ export function checkWarnings(registry: RegistryData, declarations: Declaration[
     if (row.writer !== null) connect(writers, q, row.writer)
   }
   for (const [m, row] of rows) {
+    if (options.all) for (const q of [...(row.reads ?? []), ...(row.writes ?? [])]) used.add(resolve(q))
     for (const q of row.writes ?? []) connect(writers, q, m)
     for (const q of row.reads ?? []) connect(readers, q, m)
   }
   for (const d of declarations) {
     for (const p of d.processes ?? []) {
+      for (const q of [...(p.reads ?? []), ...(p.writes ?? [])]) used.add(resolve(q))
       for (const m of p.mechanisms) {
         named.add(resolve(m))
         for (const q of p.writes ?? []) connect(writers, q, m)
@@ -239,6 +246,7 @@ export function checkWarnings(registry: RegistryData, declarations: Declaration[
     for (const p of d.ports ?? []) {
       const m = resolve(p.mechanism)
       const q = resolve(p.quantity)
+      used.add(q)
       named.add(m)
       connect(p.direction === 'out' || p.direction === 'output' ? writers : readers, q, m)
       const row = rows.get(m)
@@ -247,6 +255,12 @@ export function checkWarnings(registry: RegistryData, declarations: Declaration[
       const integrated = row.vv?.integrated ?? ''
       if (integrated === true || (typeof integrated === 'string' && integrated.trim().toLowerCase().startsWith('yes'))) continue
       warnings.add(`warning: ${d.file}: port ${m}/${q} is wired but ${m} is not marked integrated (vv.integrated: ${JSON.stringify(integrated)})`)
+    }
+  }
+  for (const q of used) {
+    const quantity = quantities.get(q)
+    if (quantity && isHostInput(quantity) && (quantity.writer === null || !rows.has(resolve(quantity.writer)))) {
+      warnings.add(`warning: ${q}: host input, no built writer (written_by: ${JSON.stringify(quantity.written_by)})`)
     }
   }
   const covers = (a: string, b: string) => {

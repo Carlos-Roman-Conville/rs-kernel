@@ -184,6 +184,74 @@ describe('checkRegistry', () => {
 })
 
 
+describe('host inputs', () => {
+  const fixture = (writer: string | null, written_by?: string | null): RegistryData => ({
+    mechanisms: [{ id: 'a', kind: 'mechanism', status: 'built', vv: { integrated: true } }],
+    quantities: [{ id: 'q', unit: '1', writer, ...(written_by === undefined ? {} : { written_by }) }],
+  })
+  const reading: Declaration = { file: 'host.json', processes: [{ id: 'p', mechanisms: ['a'], reads: ['q'] }] }
+  const warning = (value: string) => `warning: q: host input, no built writer (written_by: ${JSON.stringify(value)})`
+
+  for (const writer of [null, 'missing']) {
+    it.each(['host (...)', ' \tHoSt (until engine) ', 'host'])(`warns instead of failing for writer ${writer} and %s`, written_by => {
+      const r = fixture(writer, written_by)
+      expect(checkRegistry(r, [reading])).toEqual([])
+      expect(checkWarnings(r, [reading, reading])).toEqual([warning(written_by)])
+    })
+
+    it.each([undefined, null, '', ' \t ', 'engine', 'the host'])(`keeps the missing-writer failure for ${writer} and %s`, written_by => {
+      const r = fixture(writer, written_by)
+      expect(checkRegistry(r, [reading])).toEqual([`q: writer ${writer ?? 'null'} has no built row`])
+      expect(checkWarnings(r, [reading])).toEqual([])
+    })
+  }
+
+  it.each([false, true])('does not warn when the host input writer has a built row (all=%s)', all => {
+    const r = fixture('old-a', 'host (...)')
+    r.aliases = [{ old: 'old-a', new: 'a' }]
+    expect(checkRegistry(r, [reading], { all })).toEqual([])
+    expect(checkWarnings(r, [reading], { all })).toEqual([])
+  })
+
+  it.each(['reads', 'writes', 'ports'] as const)('scopes host warnings to declared %s and resolves quantity aliases', source => {
+    const r = fixture(null, 'host (...)')
+    r.aliases = [{ old: 'old-q', new: 'q' }]
+    const d: Declaration = { file: 'host.json' }
+    if (source === 'ports') d.ports = [{ mechanism: 'a', quantity: 'old-q', unit: '1' }]
+    else d.processes = [{ id: 'p', mechanisms: [], [source]: ['old-q'] }]
+    expect(checkWarnings(r, [])).toEqual([])
+    expect(checkWarnings(r, [d])).toEqual([warning('host (...)')])
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  it.each(['reads', 'writes'] as const)('includes built row %s only in all-mode host warnings', source => {
+    const r = fixture(null, 'host (...)')
+    r.mechanisms[0][source] = ['q']
+    r.quantities!.push({ id: 'unused', unit: '1', writer: null, written_by: 'host' })
+    expect(checkWarnings(r, [])).toEqual([])
+    expect(checkWarnings(r, [], { all: true })).toEqual([warning('host (...)')])
+    r.mechanisms[0].status = 'planned'
+    expect(checkWarnings(r, [], { all: true })).toEqual([])
+  })
+
+  it('preserves process, port, registry ownership and unit failures for host inputs', () => {
+    const r = fixture('missing', 'host (...)')
+    r.quantities![0].unit = null
+    r.mechanisms[0].writes = ['q']
+    const d: Declaration = { file: 'host.json',
+      processes: [{ id: 'p', mechanisms: ['a'], writes: ['q'] }],
+      ports: [{ mechanism: 'a', quantity: 'q', unit: '1', direction: 'out' }],
+    }
+    expect(checkRegistry(r, [d])).toEqual([
+      'host.json: process p writes q but its writer is missing, not one of the process mechanisms',
+      'host.json: port a/q writes but its writer is missing',
+      'q: written by a but its writer is missing',
+      'q: unit null: has no unit',
+    ])
+    expect(checkWarnings(r, [d])).toEqual([warning('host (...)')])
+  })
+})
+
 describe('checkFieldWarnings', () => {
   it.each([undefined, null, '', ' \t ', ' documented '])('checks schema 4 contract fields for emptiness (%s)', value => {
     const r: RegistryData = { mechanisms: [{
