@@ -1,0 +1,22 @@
+{
+  "name": "@rex/kernel-harness",
+  "version": "0.0.1",
+  "description": "Kernel acceptance harness: golden outputs and the thirty-day three-engine run.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:thirty-days": "vitest run thirty-days",
+    "golden:write": "node write-golden.mjs"
+  },
+  "dependencies": {
+    "@rex/kernel": "file:..",
+    "@rex/realism": "file:../../realism",
+    "@rex/settlement": "file:../../settlement",
+    "@rex/economy": "file:../../economy"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2",
+    "vitest": "^5.0.5"
+  }
+}

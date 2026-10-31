@@ -1,0 +1,20 @@
+{
+  "name": "@rex/kernel",
+  "version": "0.0.1",
+  "description": "The Kernel: simulation time and scheduling, events, identifiers, units, seeded random streams, snapshots and replay, cross-engine transactions. No scientific or economic formula; no engine or game imports.",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check-registry": "node --experimental-strip-types scripts/check-registry.ts"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.2",
+    "vitest": "^5.0.5"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

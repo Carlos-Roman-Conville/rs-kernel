@@ -1,0 +1,8 @@
+{
+  "meta": {},
+  "quantities": [
+    { "id": "body.temp", "unit": "K", "unit_text": "kelvin", "scope": "body", "writer": "t.body.heat", "description": "core temperature", "status": "built" },
+    { "id": "pop.deaths", "unit": "unitless", "unit_text": "persons", "scope": "population", "writer": "t.pop.births", "description": "deaths", "status": "built" },
+    { "id": "seed.unused", "unit": null, "unit_text": "", "scope": "seed", "writer": null, "description": "seed not yet used", "status": "seed" }
+  ]
+}

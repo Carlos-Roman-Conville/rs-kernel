@@ -1,0 +1,12 @@
+{
+  "mechanisms": [
+    { "id": "t.body.retired_heat", "kind": "mechanism", "status": "retired", "writes": ["missing.quantity"], "replaced_by": "t.body.heat" }
+  ],
+  "quantities": [
+    { "id": "body.retired_temp", "status": "retired", "unit": null, "writer": null, "replaced_by": "body.temp" }
+  ],
+  "aliases": [
+    { "old": "t.body.retired_heat", "new": "t.body.heat" },
+    { "old": "body.retired_temp", "new": "body.temp" }
+  ]
+}

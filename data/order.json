@@ -1,0 +1,11 @@
+{
+  "phases": ["fast", "cognition", "host", "day.settlement", "day.economy", "aggregate"],
+  "order": {
+    "fast": ["realism.step"],
+    "cognition": [],
+    "host": [],
+    "day.settlement": ["settlement.tick"],
+    "day.economy": ["economy.tick"],
+    "aggregate": []
+  }
+}

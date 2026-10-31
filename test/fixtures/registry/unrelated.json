@@ -1,0 +1,8 @@
+{
+  "mechanisms": [
+    { "id": "t.unrelated", "kind": "mechanism", "status": "built", "writes": ["unrelated.state"] }
+  ],
+  "quantities": [
+    { "id": "unrelated.state", "unit": "1", "writer": null }
+  ]
+}

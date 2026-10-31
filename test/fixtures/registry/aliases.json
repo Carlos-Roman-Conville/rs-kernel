@@ -1,0 +1,6 @@
+{
+  "meta": {},
+  "aliases": [
+    { "old": "t.body.old_name", "new": "t.body.new_name", "date": "2026-10-30", "reason": "rename" }
+  ]
+}

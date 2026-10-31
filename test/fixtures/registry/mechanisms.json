@@ -1,0 +1,11 @@
+{
+  "meta": { "schema_version": 2 },
+  "mechanisms": [
+    { "id": "t.body.heat", "kind": "mechanism", "status": "built", "writes": ["body.temp"], "reads": [], "aggregates": null },
+    { "id": "t.pop.births", "kind": "mechanism", "status": "built", "writes": ["pop.deaths"], "reads": ["body.temp"],
+      "aggregates": { "of": "t.body.heat", "by": "pop.deaths", "interface": "daily sum", "test": "test/pop.test.ts" } },
+    { "id": "t.body.new_name", "kind": "mechanism", "status": "built", "writes": [], "reads": [], "aggregates": null },
+    { "id": "t.planned.thing", "kind": "mechanism", "status": "planned", "writes": ["bogus.q"], "reads": [], "aggregates": null },
+    { "id": "t.restated", "kind": "restatement", "status": "built", "writes": ["bogus.q"], "reads": [], "aggregates": null }
+  ]
+}

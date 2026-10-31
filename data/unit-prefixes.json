@@ -1,0 +1,22 @@
+{
+  "source": "BIPM SI Brochure, 9th edition, Table 7",
+  "scales": {
+    "k": 1000,
+    "d": 0.1,
+    "c": 0.01,
+    "m": 0.001,
+    "u": 1e-06,
+    "µ": 1e-06
+  },
+  "symbols": [
+    "g",
+    "L",
+    "J",
+    "W",
+    "Pa",
+    "m",
+    "s",
+    "mol",
+    "cal"
+  ]
+}

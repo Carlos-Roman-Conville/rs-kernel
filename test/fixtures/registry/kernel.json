@@ -1,0 +1,10 @@
+{
+  "processes": [
+    { "id": "t.step", "mechanisms": ["t.body.heat", "t.body.old_name"], "writes": ["body.temp"], "reads": [], "period": 1000, "phase": "fast" },
+    { "id": "t.day", "mechanisms": ["t.pop.births"], "writes": ["pop.deaths"], "reads": ["body.temp"], "period": 86400000, "phase": "day" }
+  ],
+  "ports": [
+    { "mechanism": "t.body.heat", "quantity": "body.temp", "unit": "degC", "direction": "out" }
+  ],
+  "streams": ["t.body.heat"]
+}
