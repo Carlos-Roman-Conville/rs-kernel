@@ -407,3 +407,45 @@ Questions sent 2026-10-30 to Reality & Species, Settlement, Economy and the regi
 | K-O11 | mid-run realism snapshot and restore (Kahan carry to a serialisable Map, rng state exposed) | Reality, when first needed |
 | K-O12 | `quantities.json` (317 seeds), `aliases.json` and schema 2 exist (registry keeper, 2026-10-30); when unit 2592 lands, send it `kernel/data/units.json` to replace its provisional unit symbols. Seeds with `writer: null` (17, REG-16) are left out of declarations and reported; units are checked only on quantities a declaration uses | registry keeper; unblocked |
 | K-O8 | engines depend on the kernel as `"@rex/kernel": "file:../kernel"`; the pirate web must add `Toolchain/kernel` to vite `fs.allow` | pirate keepers, before realism/settlement/economy adoption reaches the web |
+
+## 15. Coupled updates and numerical practice (Rex, 2026-10-31)
+
+**(Rex, 2026-10-31)** Time-step stability, consistent updating of coupled systems across engines (for example, water
+changes soil strength and soil movement changes water flow), sensitivity, and scale selection are a shared Kernel and
+Reality responsibility. Below: how the Kernel handles coupled updates today (from earlier sections) and what is still
+**open**.
+
+**Today**
+
+- **One clock (§2.1):** every engine reads the same integer millisecond `T`; the day length is fixed in milliseconds
+  everywhere, so engines never drift apart on floats.
+- **Declared order each instant (§2.2):** at `T` the scheduler runs every due process sorted by phase, then by
+  position in `data/order.json` (`fast`, `cognition`, `host`, `day.settlement`, `day.economy`, `aggregate`). A process
+  due at `T` closes the interval ending at `T`, so it reads inputs already finished by processes earlier in the order.
+  That is **sequential operator splitting** (first-order, Lie / Gauss-Seidel style): coupled engines are advanced one
+  after another inside each instant, not solved together.
+- **Events (§2.3):** an event is never delivered to a process earlier in the order at the same `T`, so there is no
+  hidden cycle; two-way coupling (A affects B and B affects A) closes with a lag of one step in one direction, and the
+  declared order says which direction lags.
+- **Transactions (§6):** cross-engine provider calls inside one tick run in a transaction, so a coupled update either
+  completes for all participants or rolls back for all.
+- **Realism (§2.2):** realism runs as one kernel process per step today (stage 1); stage 2 (Reality's call) would
+  register each realism process separately with its own period.
+- **Conservation and replay (§4, §5; ADOPTION.md unit 2656):** realism conservation sums use compensated (Neumaier)
+  summation; replay with the same seed reproduces a run exactly and a different seed changes only stochastic state (P0
+  test 2)—the basis for sensitivity runs.
+- **Scale (§9):** the resolution hand-off moves an entity between detailed and aggregate mechanisms; that is where scale
+  selection meets the Kernel.
+
+**Open**
+
+- **Splitting order and accuracy:** whether some couplings need a symmetric (Strang) order or an iteration inside the
+  instant instead of one sequential pass. Owner: Reality for physical couplings, with the Kernel providing the
+  mechanism (order data, phase hooks). **open**
+- **Sub-stepping and stability:** a process whose stable time step is shorter than its declared period (a stiff
+  mechanism) needs internal sub-steps or a shorter period. Each mechanism's stability limit is its owner's research and
+  test (PLATFORM §11a); the Kernel only runs the periods declared. Adaptive time steps are not supported. **open**
+- **Sensitivity:** parameter sweeps and seed ensembles can be run on the harness (replay + seeds); no shared tool yet.
+  **open**, Kernel and Reality.
+- **Scale selection:** which mechanisms run detailed or aggregate where, and when the resolution hand-off fires, is the
+  owning engine's; the Kernel's part is the hand-off contract (§9). **open**
