@@ -184,6 +184,66 @@ describe('checkRegistry', () => {
 })
 
 
+describe('History inertness', () => {
+  const fixture = (): RegistryData => ({
+    mechanisms: [{ id: 'writer', kind: 'mechanism', status: 'built' }],
+    quantities: ['history.record', 'history.x', 'economy.price', 'historyish.x'].map(id => ({ id, unit: '1', writer: 'writer' })),
+    aliases: [
+      { old: 'old-record', new: 'history.record' },
+      { old: 'old-x', new: 'history.x' },
+      { old: 'history.old-price', new: 'economy.price' },
+    ],
+  })
+  const reading = (engine: string | undefined, source: string | undefined, quantity: string): Declaration => ({
+    file: 'reader.json', engine,
+    ...(source === 'process'
+      ? { processes: [{ id: 'p', mechanisms: ['writer'], reads: [quantity] }] }
+      : { ports: [{ mechanism: 'writer', quantity, unit: '1', direction: source }] }),
+  })
+  const writing = (engine: string | undefined, source: string, quantity: string): Declaration => ({
+    file: 'writer.json', engine,
+    ...(source === 'process'
+      ? { processes: [{ id: 'p', mechanisms: ['writer'], writes: [quantity] }] }
+      : { ports: [{ mechanism: 'writer', quantity, unit: '1', direction: source }] }),
+  })
+
+  for (const engine of [undefined, 'economy', 'History']) {
+    it.each(['process', 'in', 'input', 'call', undefined])(`restricts History reads for engine ${engine} through %s`, source => {
+      for (const quantity of ['history.record', 'old-record']) {
+        expect(checkRegistry(fixture(), [reading(engine, source, quantity)])).toEqual([
+          `reader.json: ${engine ?? 'undeclared engine'} reads history.record; only History may read history.*`,
+        ])
+      }
+      for (const quantity of ['economy.price', 'historyish.x', 'history.old-price']) {
+        expect(checkRegistry(fixture(), [reading(engine, source, quantity)])).toEqual([])
+      }
+    })
+    it.each(['process', 'out', 'output'])(`does not restrict writes for engine ${engine} through %s`, source => {
+      for (const quantity of ['history.x', 'economy.price']) {
+        expect(checkRegistry(fixture(), [writing(engine, source, quantity)])).toEqual([])
+      }
+    })
+  }
+
+  it.each(['process', 'in', 'input', 'call', undefined])('allows History to read any quantity through %s', source => {
+    for (const quantity of ['history.record', 'economy.price', 'old-record']) {
+      expect(checkRegistry(fixture(), [reading('history', source, quantity)])).toEqual([])
+    }
+  })
+
+  it.each(['process', 'out', 'output'])('restricts History writes to resolved history.* ids through %s', source => {
+    for (const quantity of ['history.x', 'old-x']) {
+      expect(checkRegistry(fixture(), [writing('history', source, quantity)])).toEqual([])
+    }
+    for (const quantity of ['economy.price', 'history.old-price', 'historyish.x']) {
+      const resolved = quantity === 'history.old-price' ? 'economy.price' : quantity
+      expect(checkRegistry(fixture(), [writing('history', source, quantity)])).toEqual([
+        `writer.json: history writes ${resolved}; History may write only history.*`,
+      ])
+    }
+  })
+})
+
 describe('port directions', () => {
   const fixture = (): RegistryData => ({
     mechanisms: ['writer', 'caller'].map(id => ({ id, kind: 'mechanism', status: 'built', vv: { integrated: true } })),

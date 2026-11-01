@@ -30,6 +30,7 @@ export interface Alias { old: string, new: string }
 export interface Declaration {
   /** Label used in failure lines, usually the kernel.json path. */
   file: string
+  engine?: string
   processes?: { id: string, mechanisms: string[], writes?: string[], reads?: string[] }[]
   ports?: { mechanism: string, quantity: string, kind?: QuantityKind, unit: string | null, direction?: string }[]
   streams?: string[]
@@ -131,6 +132,16 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
 
   for (const d of declarations) {
     const where = d.file
+    const checkRead = (q: string) => {
+      if (d.engine !== 'history' && q.startsWith('history.')) {
+        failures.push(`${where}: ${d.engine ?? 'undeclared engine'} reads ${q}; only History may read history.*`)
+      }
+    }
+    const checkWrite = (q: string) => {
+      if (d.engine === 'history' && !q.startsWith('history.')) {
+        failures.push(`${where}: history writes ${q}; History may write only history.*`)
+      }
+    }
     const checkMechanism = (id: string, what: string) => {
       if (!hasMechanism(id)) failures.push(`${where}: ${what} names mechanism ${id} with no built row`)
     }
@@ -138,6 +149,7 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
       const mechanisms = p.mechanisms.map(resolve)
       for (const m of p.mechanisms) checkMechanism(m, `process ${p.id}`)
       for (const raw of p.reads ?? []) {
+        checkRead(resolve(raw))
         used.add(resolve(raw))
         if (!quantities.has(resolve(raw))) failures.push(`${where}: process ${p.id} reads quantity ${raw} absent from quantities.json`)
       }
@@ -145,6 +157,7 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
         const q = resolve(raw)
         used.add(q)
         recordWrite(q, d)
+        checkWrite(q)
         const quantity = quantities.get(q)
         if (!quantity) { failures.push(`${where}: process ${p.id} writes quantity ${raw} absent from quantities.json`); continue }
         const writer = quantity.writer === null ? null : resolve(quantity.writer)
@@ -160,12 +173,14 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
         failures.push(`${where}: port ${port.mechanism}/${q} has unknown direction ${JSON.stringify(port.direction)}`)
       }
       if (port.direction === 'out' || port.direction === 'output') {
+        checkWrite(q)
         recordWrite(q, d)
         const quantity = quantities.get(q)
         if (quantity && resolve(port.mechanism) !== (quantity.writer === null ? null : resolve(quantity.writer))) {
           failures.push(`${where}: port ${port.mechanism}/${q} writes but its writer is ${quantity.writer ?? 'null'}`)
         }
       }
+      if (port.direction === undefined || ['in', 'input', 'call'].includes(port.direction)) checkRead(q)
       checkMechanism(port.mechanism, `port ${port.quantity}`)
       const error = valueError(port)
       if (error) { failures.push(`${where}: port ${port.mechanism}/${q} unit ${JSON.stringify(port.unit)}: ${error}`); continue }
