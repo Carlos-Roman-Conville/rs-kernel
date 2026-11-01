@@ -8,7 +8,8 @@
     ".": "./thirty-days.ts",
     "./adapters": "./adapters.ts",
     "./examples": "./examples.ts",
-    "./thirty-days": "./thirty-days.ts"
+    "./thirty-days": "./thirty-days.ts",
+    "./work-resolution": "./work-resolution.ts"
   },
   "scripts": {
     "test": "vitest run",
