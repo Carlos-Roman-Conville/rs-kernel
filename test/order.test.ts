@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { defaultOrder, Order, type ProcessOrder } from '../src/index.ts'
 
 describe('declared process order', () => {
-  it('O-default: default data orders fast, cognition, host, settlement, economy, aggregate and names engine processes', () => {
-    expect(defaultOrder.phases).toEqual(['fast', 'cognition', 'host', 'day.settlement', 'day.economy', 'aggregate'])
+  it('O-default: default data orders fast, cognition, host, settlement, economy, aggregate, record and names engine processes', () => {
+    expect(defaultOrder.phases).toEqual(['fast', 'cognition', 'host', 'day.settlement', 'day.economy', 'aggregate', 'record'])
+    expect(defaultOrder.order.record).toEqual([])
     expect(defaultOrder.order.cognition).toEqual([])
     expect(defaultOrder.order.host).toEqual([])
     const order = new Order()

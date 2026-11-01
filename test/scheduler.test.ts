@@ -9,6 +9,56 @@ const process = (id: string, period: number, run: Process['run'] = () => {}): Pr
   ({ id, mechanisms: [], period, phase: 'fast', run })
 
 describe('simulation scheduler', () => {
+  it('P-readonly: record observers run last without creating streams or changing normal draws and emissions', () => {
+    const run = (attached: boolean) => {
+      const random = streams(42)
+      const get = vi.spyOn(random, 'get')
+      const events: ScheduledEmission[] = []
+      const calls: string[] = []
+      const clock = new Scheduler({ rng: random, emit: event => { events.push(event) }, order: {
+        phases: defaultOrder.phases,
+        order: { ...defaultOrder.order, aggregate: ['aggregate'], record: ['observer'] },
+      } })
+      if (attached) clock.register({
+        ...process('observer', SECOND, ctx => {
+          calls.push(`${ctx.t}:record`)
+          const before = random.state()
+          const accesses = get.mock.calls.length
+          for (const id of ['shared', 'observer.only', 'undeclared']) {
+            expect(() => ctx.rng(id)).toThrow(new Error('read-only process observer may not use rng'))
+          }
+          expect(() => ctx.emit('forbidden', {})).toThrow(new Error('read-only process observer may not emit'))
+          expect(random.state()).toEqual(before)
+          expect(get).toHaveBeenCalledTimes(accesses)
+        }),
+        phase: 'record', readonly: true, mechanisms: ['shared', 'observer.only'],
+      })
+      expect(random.state()).toEqual({})
+      expect(get).not.toHaveBeenCalled()
+      clock.register({ ...process('aggregate', SECOND, ctx => {
+        calls.push(`${ctx.t}:aggregate`)
+      }), phase: 'aggregate' })
+      clock.register({ ...process('realism.step', SECOND, ctx => {
+        calls.push(`${ctx.t}:fast`)
+        ctx.emit('draw', ctx.rng('shared')(), 'command.1')
+      }), mechanisms: ['shared'] })
+      clock.runUntil(3 * SECOND)
+      get.mockRestore()
+      return { events, calls, state: random.state() }
+    }
+    const detached = run(false)
+    const attached = run(true)
+    expect(attached.calls).toEqual([1, 2, 3].flatMap(t =>
+      ['fast', 'aggregate', 'record'].map(phase => `${t * SECOND}:${phase}`)))
+    expect(attached.events).toEqual(detached.events)
+    expect(attached.state).toEqual(detached.state)
+    const reference = streams(42).get('shared')
+    expect(attached.events).toEqual([1, 2, 3].map(t => ({
+      t: t * SECOND, source: 'realism.step', phase: 0, position: 0,
+      type: 'draw', payload: reference(), cause: 'command.1',
+    })))
+  })
+
   it('P-cognition: shared instants run fast before cognition before host before daily processes', () => {
     const clock = new Scheduler({ order: {
       phases: defaultOrder.phases,

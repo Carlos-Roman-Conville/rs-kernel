@@ -16,6 +16,7 @@ export interface Process {
   readonly period: SimTime
   readonly offset?: SimTime
   readonly phase: string
+  readonly readonly?: boolean
   run(ctx: ProcessContext): void
 }
 
@@ -132,13 +133,16 @@ export class Scheduler {
     if (typeof process.run !== 'function') throw new Error('process run must be a function')
     const rank = this.order.register(process.phase, id)
     const next = offset > this.time ? offset : after(this.time, period - (this.time - offset) % period)
+    const readonly = process.readonly === true
     const entry: Entry = {
       ...rank, last: this.time, run: process.run.bind(process),
       rng: mechanismId => {
+        if (readonly) throw new Error(`read-only process ${id} may not use rng`)
         if (!mechanisms.has(mechanismId)) throw new Error(`undeclared mechanism: ${mechanismId}`)
         return this.random.get(mechanismId)
       },
       emit: (type, payload, cause) => {
+        if (readonly) throw new Error(`read-only process ${id} may not emit`)
         if (!this.sink) throw new Error('scheduler emit requires an event sink')
         this.sink({ t: this.time, source: id, ...rank, type, payload, cause })
       },
