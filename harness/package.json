@@ -4,6 +4,11 @@
   "description": "Kernel acceptance harness: golden outputs and the thirty-day three-engine run.",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./thirty-days.ts",
+    "./adapters": "./adapters.ts",
+    "./thirty-days": "./thirty-days.ts"
+  },
   "scripts": {
     "test": "vitest run",
     "test:thirty-days": "vitest run thirty-days",
