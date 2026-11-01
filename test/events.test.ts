@@ -55,6 +55,49 @@ describe('events: DESIGN 2.3', () => {
     expect(bus.since(cursor)).toEqual([])
   })
 
+  it('recordsSince returns the unread state records including scheduler metadata', () => {
+    const bus = new EventBus()
+    expect(bus.recordsSince()).toEqual([])
+    ;[emission(), emission(), emission({ position: 1 }), emission({ phase: 1 }), emission({ t: 11 })].forEach(bus.emit)
+    const records = bus.state().records
+    expect(bus.recordsSince()).toEqual(records)
+    for (let cursor = 0; cursor <= records.length; cursor++) {
+      expect(bus.recordsSince(cursor)).toEqual(records.slice(cursor))
+      for (const reader of [
+        { t: 9, phase: 9, position: 9 }, { t: 10, phase: 0, position: 0 },
+        { t: 10, phase: 0, position: 1 }, { t: 10, phase: 1, position: 0 },
+        { t: 11, phase: 0, position: 0 },
+      ]) {
+        expect(bus.recordsSince(cursor, reader).map(record => record.event)).toEqual(bus.since(cursor, reader))
+      }
+    }
+  })
+
+  it('recordsSince detaches records, events and nested payloads from the queue', () => {
+    const bus = new EventBus()
+    bus.emit(emission())
+    const before = bus.state().records
+    const records = bus.recordsSince()
+    Object.assign(records[0], { phase: 9, position: 9, sequence: 9 })
+    Object.assign(records[0].event, { source: 'mutated' })
+    ;(records[0].event.payload as { value: number }).value = 9
+    records.pop()
+    expect(bus.recordsSince(0)).toEqual(before)
+  })
+
+  it('recordsSince rejects invalid cursors and readers including cursors beyond the queue', () => {
+    const bus = new EventBus()
+    bus.emit(emission())
+    expect(() => bus.recordsSince(2)).toThrow('event cursor is beyond the queue')
+    for (const cursor of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => bus.recordsSince(cursor)).toThrow('event cursor must be a non-negative safe integer')
+    }
+    for (const reader of [
+      { t: 0.5, phase: 0, position: 0 }, { t: 10, phase: -1, position: 0 },
+      { t: 10, phase: 0, position: Infinity },
+    ]) expect(() => bus.recordsSince(0, reader)).toThrow()
+  })
+
   it('scheduler publication invokes no subscribers; later processes explicitly read the queue', () => {
     const bus = new EventBus()
     const read = vi.fn()

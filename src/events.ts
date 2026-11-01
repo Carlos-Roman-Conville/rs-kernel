@@ -88,6 +88,20 @@ export class EventBus {
     return structuredClone(events)
   }
 
+  /** Read detached records with scheduler metadata; reader visibility follows since(). */
+  recordsSince(cursor: EventCursor = 0, reader?: EventReader): EventRecord[] {
+    natural(cursor, 'event cursor')
+    if (cursor > this.records.length) throw new Error('event cursor is beyond the queue')
+    if (reader) validatePosition(reader)
+    const records: EventRecord[] = []
+    for (let i = cursor; i < this.records.length; i++) {
+      const record = this.records[i]
+      if (reader && compare(at(record), reader) > 0) break
+      records.push(record)
+    }
+    return structuredClone(records)
+  }
+
   state(): EventBusState {
     return structuredClone({ counter: this.counter, records: this.records })
   }
