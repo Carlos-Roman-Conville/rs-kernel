@@ -27,7 +27,8 @@ export function runnerAdapter<S, C, E extends { type: string }>(
     publish(ctx: ProcessContext) {
       for (; cursor < runner.events.length; cursor++) {
         const event = runner.events[cursor]
-        ctx.emit(event.type, event)
+        const cause = 'cause' in event ? event.cause : undefined
+        ctx.emit(event.type, event, typeof cause === 'string' && cause.length > 0 ? cause : undefined)
       }
     },
   }
