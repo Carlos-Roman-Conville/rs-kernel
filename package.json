@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "description": "The Kernel: simulation time and scheduling, events, identifiers, units, seeded random streams, snapshots and replay, cross-engine transactions. No scientific or economic formula; no engine or game imports.",
   "private": true,
-  "files": ["src", "data", "README.md"],
+  "files": ["dist", "src", "data", "README.md"],
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "check-registry": "node --experimental-strip-types scripts/check-registry.ts"
@@ -16,6 +18,9 @@
     "vitest": "^5.0.5"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
   }
 }

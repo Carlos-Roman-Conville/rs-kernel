@@ -509,6 +509,7 @@ Separate repos isolate commits, not dependencies. KRN-31's pairing rule is the i
 - **Releases.** A kernel release is an annotated git tag `vMAJOR.MINOR.PATCH` on a committed, green kernel, made by a
   belt unit; `package.json` `version` matches the tag. A release is cut only when the exported interface or data the
   consumers use changes (most kernel units are internal and need none). Tags are never moved or reused.
+  A release commit carries `dist/` built by `npm run build` (compiled JavaScript plus declarations, because consumers' plain `node` cannot strip types under `node_modules`), and the release gate rebuilds and requires `git diff --quiet -- dist`; between releases `dist/` may lag `src/`, since only tags are installed.
 - **Install source.** Consumers depend on the tag in the local bare mirror that the backup keeper maintains:
   `"@rex/kernel": "git+file:///E:/backups/reality-sim/git/kernel.git#v0.2.0"`. npm installs a **copy** (no junction)
   and the lockfile records the full commit hash, so each consumer is pinned to a recorded commit. Tested 2026-10-31:
