@@ -521,6 +521,17 @@ Separate repos isolate commits, not dependencies. KRN-31's pairing rule is the i
 kernel's tree until they upgrade, so a kernel change is exercised by the harness first and by consumers only when they
 move. Against it: the KRN-26 recovery took hours and lost 48 commits of history; COG-42 stopped a lane.
 
+**Agreed by the keepers (2026-10-31).** Reality: Life pins `@rex/reality` at a tag (SPLIT.md revision after approval);
+realism moves to a kernel tag after its trace re-export (2803), so nothing waits on tagging; first priority is the pirate
+web pinning realism (I-1045, REAL-19). Backup keeper: the mirror is a suitable read-only install source, with three
+conditions: (A) always the `git+file:///` URL form (a plain-path clone hard-links the mirror's protected objects); once
+the backups get their own account, each consumer account runs
+`git config --global --add safe.directory "E:/backups/reality-sim/git/*"`; (B) tags reach the mirror on every sync
+(after each passing belt unit, and a 30-minute job), are never moved or deleted there (an update hook refuses it), and a
+release unit can sync itself (`python E:/backups/reality-sim/bin/backup.py mirror --repo <repo>`); after the account
+split a release is installable within about 5 minutes, so release notes say "wait for the mirror"; (C) lockfiles pin the
+path `E:/backups/reality-sim/git/<repo>.git`, so that path is fixed; moving the backups means rewriting every lockfile.
+
 **Open (Rex):** approve the scheme; choose the install source (the mirror, recommended because it records the commit
 itself and needs no build artefact; or tarballs). Then the order: kernel `v0.1.0` tag and harness relative import first,
 then one upgrade unit per consumer, then the engines' own tags and the pirate web, then the snapshot `versions` field.
