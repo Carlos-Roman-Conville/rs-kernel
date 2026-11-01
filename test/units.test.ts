@@ -79,6 +79,12 @@ describe('units (DESIGN section 7)', () => {
     }
   })
 
+  it('parses siemens with prefixes (soil salinity dS/m)', () => {
+    expect(sameDimension('dS/m', 'S/m')).toBe(true)
+    expect(parse('dS/m').scale).toBe(parse('S/m').scale * 0.1)
+    expect(parse('S').dim).toEqual([-2, -1, 3, 0, 0, 2, 0, 0, 0])
+  })
+
   it('U-data: hosts can supply sourced rows without changing defaults; parsing does not mutate the table', () => {
     const table: UnitTable = { ...defaultUnits, shift: { dim: dim('h'), scale: 28800, source: 'test host shift policy' } }
     expect(convert(1, 'shift', 'h', table)).toBe(8)

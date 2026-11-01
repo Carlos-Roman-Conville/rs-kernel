@@ -28,6 +28,7 @@
   "person": { "dim": [0,0,0,0,0,0,0,0,1], "scale": 1, "source": "Kernel DESIGN.md section 7; Settlement CONTRACTS section 16, person-hours" },
   "mmHg": {"dim": [-1, 1, -2, 0, 0, 0, 0, 0, 0], "scale": 133.322387415, "source": "NIST SP 811, Appendix B.8, conventional millimetre of mercury"},
   "atm": {"dim": [-1, 1, -2, 0, 0, 0, 0, 0, 0], "scale": 101325, "source": "NIST SP 811, Appendix B.8: atmosphere, standard (atm) = 1.01325 E+05 Pa exactly"},
+  "S": {"dim": [-2, -1, 3, 0, 0, 2, 0, 0, 0], "scale": 1, "source": "BIPM SI Brochure, 9th edition, Table 4: siemens, S = A/V = m^-2 kg^-1 s^3 A^2"},
   "ppm": {"dim": [0, 0, 0, 0, 0, 0, 0, 0, 0], "scale": 1e-06, "source": "BIPM SI Brochure, section 5.4.7, parts per million"},
   "a": {"dim": [0, 0, 1, 0, 0, 0, 0, 0, 0], "scale": 31557600, "source": "IAU Julian year; ISO 80000-3: 365.25 days exactly. Rates and lifetimes only; calendar and aggregate steps remain Catalogue / History policy (DESIGN K-O1)."},
   "MET": {"dim": [2, 0, -3, 0, 0, 0, 0, 0, 0], "scale": 1.1622222222222223, "source": "Ainsworth et al. (2011), Compendium of Physical Activities: 1 kcal/(kg h). The approximate oxygen equivalence of 3.5 mL O2/(kg min) belongs to physiology, not unit conversion."}
