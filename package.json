@@ -1,8 +1,9 @@
 {
   "name": "@rex/kernel",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "The Kernel: simulation time and scheduling, events, identifiers, units, seeded random streams, snapshots and replay, cross-engine transactions. No scientific or economic formula; no engine or game imports.",
   "private": true,
+  "files": ["src", "data", "README.md"],
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
