@@ -1,8 +1,61 @@
+// @ts-expect-error The repo omits Node typings; node:crypto is provided by the test runtime.
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { canonical, fnv1a64, take, restore, simTime, type Participant, type Snapshot } from '../src/index.ts'
+import { canonical, fnv1a64, take, restore, checkKernelBlock, simTime, type Participant, type Snapshot } from '../src/index.ts'
 
 const kernel = (): Snapshot['kernel'] => ({
-  version: 1, t: simTime(1000), epoch: '1690-01-01', seed: 42, eventCounter: 3, rng: { mechanism: 123 },
+  version: 2, t: simTime(1000), epoch: 1690.0, epochLabel: '1690-01-01', catalogue_hash: null,
+  seed: 42, eventCounter: 3, rng: { mechanism: 123 },
+})
+
+describe('snapshot version 2 kernel rules', () => {
+  const hash = createHash('sha256').update('fixture').digest('hex')
+
+  it('accepts a fixture sha256 or null catalogue hash and finite or null epochs', () => {
+    for (const catalogue_hash of [hash, null]) {
+      for (const epoch of [1690.0, 0, -0.5, null]) {
+        expect(() => checkKernelBlock({ ...kernel(), epoch, catalogue_hash })).not.toThrow()
+      }
+    }
+    const block = kernel()
+    delete block.epochLabel
+    expect(() => checkKernelBlock(block)).not.toThrow()
+  })
+
+  it.each([hash.toUpperCase(), hash.slice(1), '', undefined, 42])('rejects invalid catalogue hash %s', catalogue_hash => {
+    expect(() => checkKernelBlock({ ...kernel(), catalogue_hash })).toThrow('catalogue_hash')
+  })
+
+  it.each(['1690-01-01', NaN, Infinity, -Infinity, undefined])('rejects invalid epoch %s', epoch => {
+    expect(() => checkKernelBlock({ ...kernel(), epoch })).toThrow('epoch')
+  })
+
+  it('rejects version 1, non-string labels, and missing blocks', () => {
+    expect(() => checkKernelBlock({ ...kernel(), version: 1 })).toThrow('version')
+    for (const epochLabel of [null, 42, undefined]) {
+      expect(() => checkKernelBlock({ ...kernel(), epochLabel })).toThrow('epochLabel')
+    }
+    for (const block of [null, undefined, [], 2]) {
+      expect(() => checkKernelBlock(block)).toThrow('block')
+    }
+  })
+
+  it('canonical round-trips a version 2 kernel block', () => {
+    const block = { ...kernel(), catalogue_hash: hash }
+    const restored = JSON.parse(canonical(block))
+    checkKernelBlock(restored)
+    expect(restored).toEqual(block)
+    expect(canonical(restored)).toBe(canonical(block))
+  })
+
+  it('restore rejects invalid kernel metadata before mutating participants', () => {
+    const a = engine('a', 1)
+    const snapshot = take([a.participant], kernel())
+    snapshot.kernel.version = 1
+    a.participant.restore(2)
+    expect(() => restore([a.participant], snapshot)).toThrow('version')
+    expect(a.state()).toBe(2)
+  })
 })
 
 function engine(id: string, initial: unknown) {

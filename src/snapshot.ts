@@ -6,12 +6,33 @@ export interface Snapshot {
   kernel: {
     version: number
     t: SimTime
-    epoch: string
+    epoch: number | null
+    epochLabel?: string
+    catalogue_hash: string | null
     seed: number
     eventCounter: number
     rng: StreamsState
   }
   engines: Record<string, unknown>
+}
+
+/** Validate host-supplied epoch and catalogue metadata without interpreting it. */
+export function checkKernelBlock(block: unknown): void {
+  if (block === null || typeof block !== 'object' || Array.isArray(block)) {
+    throw new Error('snapshot kernel block must be an object')
+  }
+  const value = block as Record<string, unknown>
+  if (value.version !== 2) throw new Error('snapshot kernel version must be 2')
+  if (value.epoch !== null && (typeof value.epoch !== 'number' || !Number.isFinite(value.epoch))) {
+    throw new Error('snapshot kernel epoch must be null or a finite number')
+  }
+  if ('epochLabel' in value && typeof value.epochLabel !== 'string') {
+    throw new Error('snapshot kernel epochLabel must be absent or a string')
+  }
+  if (value.catalogue_hash !== null &&
+      (typeof value.catalogue_hash !== 'string' || !/^[0-9a-f]{64}$/.test(value.catalogue_hash))) {
+    throw new Error('snapshot kernel catalogue_hash must be null or 64 lowercase hex characters')
+  }
 }
 
 /** Plain JSON comparison only: undefined properties/elements are dropped, not reordered. */
@@ -75,6 +96,7 @@ export function take(participants: readonly Participant[], kernelPart: Snapshot[
 
 /** Restore requested adapters; return detached kernel state for the host to apply. */
 export function restore(participants: readonly Participant[], snapshot: Snapshot): Snapshot['kernel'] {
+  checkKernelBlock(snapshot.kernel)
   validateParticipants(participants)
   for (const { id } of participants) {
     if (!Object.hasOwn(snapshot.engines, id)) throw new Error(`missing snapshot participant: ${id}`)

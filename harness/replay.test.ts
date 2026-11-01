@@ -43,7 +43,7 @@ function run(days: number, seed: number, recording?: Recording) {
     },
   })
   const kernel = (): Snapshot['kernel'] => ({
-    version: 1, t: clock.t, epoch: 'prepared-hamlet', seed,
+    version: 2, t: clock.t, epoch: null, epochLabel: 'prepared-hamlet', catalogue_hash: null, seed,
     eventCounter: bus.state().counter, rng: random.state(),
   })
   // Providers and process closures are rebuilt by their owning fixture constructors.
