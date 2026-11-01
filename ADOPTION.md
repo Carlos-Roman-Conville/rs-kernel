@@ -112,6 +112,13 @@ missing file (`GOLDEN_WRITE=1` still works). Every changed key is explained; non
   more transaction exists (39 → 40); every later `id`, `day` shift, and `counters.txn` 39 → 40 and `titles.title.0004.since`
   txn.0008 → txn.0009 follow from it.
 
+### 5258 harness realism goldens re-recorded (Kernel keeper, I-1066)
+
+Realism HEAD used: 9cec538. All six `harness/golden/realism-*.json` re-recorded with `npm run golden:write`; the eleven
+realism commits since 15dc9d2 that move them are bisected in realism `validation/GOLDEN-DRIFT.md` (unit 5158) and each
+has a reason line in `harness/golden/SOURCE.md`; two (2634, 2727) only add keys, by Reality keeper ruling 2026-11-01.
+Settlement and economy goldens unchanged.
+
 ## Kernel (stage K; repo `Toolchain/kernel`, nothing outside it)
 
 | Unit | Edit | Acceptance test (the Gate) | Model |
