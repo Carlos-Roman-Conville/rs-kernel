@@ -384,6 +384,17 @@ into the sums and drop it, keeping a cursor offset so `into`/`outOf` and any con
 `Trace.compact(horizonT)` owned by realism (it may use the helper) that also moves World's conserved and element
 cursors; crises and failed checks are never dropped; off by default (ADOPTION 2607). Required for the 1 s harness run.
 
+**Trace (moved from realism, 2026-10-31).** The Reality/Life split (realism `SPLIT.md` §7, agreed by the Kernel and
+Reality keepers) moved realism's generic trace into the Kernel as `src/trace.ts` (unit 2801), byte-identical to
+realism's file after realism units 2777 and 2783 removed its crisis records (crises now live in realism's `crisis.ts`).
+Realism re-exports it from `@rex/kernel`, so no trace or golden hash changes. What it is: transfer, check and note
+records; a check that compares expected and actual within a stated tolerance; Neumaier-compensated running sums per
+component and quantity; compaction that folds old passing checks and ordinary notes into summaries while keeping
+failures, kept notes and their diagnostics verbatim. It contains no scientific formula; `chemicalChange` on a transfer
+is an opaque flag the Kernel never interprets. This replaces the earlier line that `Trace.compact` is owned by realism:
+the trace is now Kernel infrastructure that Reality, Life and any other engine may use; realism's `World` keeps its
+own cursors and conservation checks.
+
 ## 11. Migration order (every step keeps every suite green)
 
 | Stage | Steps | Touches | Green check |
