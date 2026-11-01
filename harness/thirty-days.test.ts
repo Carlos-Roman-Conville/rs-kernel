@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DAY, HOUR, SECOND, EventBus, Scheduler } from '@rex/kernel'
+import { DAY, HOUR, SECOND, EventBus, Scheduler } from '../src/index.ts'
 import { Runner as EconomyRunner, materialProvider } from '@rex/economy'
 import { TICK_ORDER } from '@rex/settlement'
 import { Scheduler as RealismScheduler } from '../../realism/src/scheduler.ts'

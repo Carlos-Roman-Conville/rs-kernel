@@ -1,5 +1,5 @@
 // P0 acceptance adapters. Engine examples own all circumstances, recipes and trading decisions.
-import { DAY, SECOND, transaction, type Participant, type ProcessContext, Scheduler } from '@rex/kernel'
+import { DAY, SECOND, transaction, type Participant, type ProcessContext, Scheduler } from '../src/index.ts'
 import { Scheduler as RealismScheduler } from '../../realism/src/scheduler.ts'
 import type { World } from '../../realism/src/world.ts'
 import type { Runner as SettlementRunner } from '@rex/settlement'

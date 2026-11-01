@@ -15,7 +15,6 @@
     "golden:write": "node write-golden.mjs"
   },
   "dependencies": {
-    "@rex/kernel": "file:..",
     "@rex/realism": "file:../../realism",
     "@rex/settlement": "file:../../settlement",
     "@rex/economy": "file:../../economy"

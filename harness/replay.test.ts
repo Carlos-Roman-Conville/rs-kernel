@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canonical, DAY, HOUR, SECOND, EventBus, Scheduler, streams, take, restore, type Snapshot } from '@rex/kernel'
+import { canonical, DAY, HOUR, SECOND, EventBus, Scheduler, streams, take, restore, type Snapshot } from '../src/index.ts'
 import { buildHamlet } from '../../settlement/examples/hamlet.ts'
 import { runHorseStable } from '../../realism/examples/horse-stable.ts'
 import { Scheduler as RealismScheduler } from '../../realism/src/scheduler.ts'

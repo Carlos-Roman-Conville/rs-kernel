@@ -1,5 +1,5 @@
 // P0 acceptance adapters. Engine examples own all circumstances, recipes and trading decisions.
-import { DAY, HOUR, SECOND, EventBus, Scheduler } from '@rex/kernel'
+import { DAY, HOUR, SECOND, EventBus, Scheduler } from '../src/index.ts'
 import type { World } from '../../realism/src/world.ts'
 import { runHorseStable } from '../../realism/examples/horse-stable.ts'
 import { buildHamlet } from '../../settlement/examples/hamlet.ts'
