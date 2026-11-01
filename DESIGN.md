@@ -545,3 +545,22 @@ off-machine, and track the repository-deletion root cause separately." Two amend
   Card Games ISSUES I-1048.
 Order: kernel `v0.1.0` and the harness's relative import; the pirate web pinned to a realism tag; one paired upgrade
 unit per kernel consumer; the engines' own tags; the snapshot `versions` field.
+
+## 17. Transfers and event contracts (CG-17, CG-18)
+
+**Decision (controller 2026-11-01, recorded for Rex to overrule).** PLATFORM §7a (one transfer per physical flow;
+Δsource = −q and Δdestination = +q in one transaction; losses separately) is enforced by one kernel service,
+`transfer()` in `src/transfer.ts`, that every engine's transfers go through (nutrients, water, mass, energy, money).
+It is bookkeeping: no formula, no knowledge of the quantity, no conversion; the units of the request and of both
+ledgers must be the same unit. Owners implement `TransferLedger` and decide their own refusals (e.g. negative
+balances). Losses are ordinary transfers to a loss account in the same call. `TransferJournal` records each entry
+with the trace's transfer field names, and per quantity per instant debits equal credits (`test/transfer.test.ts`).
+Economy and Settlement ledgers migrate in paired units after kernel v0.1.0; CHAINS CG-19/20/21 adopt it.
+
+**Event contracts (CG-18).** The list of event types lives in `Toolchain/registry/events.json`, owned by the
+registry keeper (format: type, producer, consumers, cause, payload fields with kind/quantity/unit/required). The
+Kernel supplies `checkEventContracts` in `scripts/check-registry.ts` and an opt-in `EventBus` contracts hook; both
+warn and never fail until the list is populated. The Kernel holds no event list.
+
+**Registry (CG-17).** The registry keeper registers the proposed rows: `kernel.resolution.handoff`,
+`kernel.transaction`, and a row for the transfer service.
