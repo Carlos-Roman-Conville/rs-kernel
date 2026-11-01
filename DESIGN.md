@@ -518,6 +518,18 @@ Separate repos isolate commits, not dependencies. KRN-31's pairing rule is the i
   about 310 KB per release, smaller with a `files` list).
 - **Upgrades.** A consumer moves to a new release only in its own belt unit (bump the tag, `npm install`, its filtered
   tests), paired with the release by `Needs:` (KRN-31). Until then it keeps the old commit, whatever the kernel's tree holds.
+
+**Removing the old link.**
+
+```
+python -I -c "import os,sys; p=r'node_modules/@rex/kernel'; l=os.path.lexists(p); j=l and bool(getattr(os.lstat(p),'st_file_attributes',0) & 0x400 or os.path.islink(p)); sys.exit('refuse: '+p+' is a real directory') if l and not j else (os.rmdir(p) if j else None)"
+```
+
+On Windows `os.rmdir` deletes a junction or symlink itself, never its target; the reparse-point attribute (0x400)
+detects a junction on Python 3.11, which has no `os.path.isjunction`. The command refuses a real directory and is a
+no-op when the link is gone; never `cmd /c rmdir` (sandbox, I-1064), `rm -rf`, `Remove-Item -Recurse`, `git clean -x`
+or a forced worktree removal under `node_modules` (I-1048).
+
 - **The harness** tests the kernel's own working tree, so it imports the kernel by relative path (`../src/index.ts`, a
   vitest alias) instead of a `file:..` package link, and depends on the engines at their release tags. No junction into
   any live repo remains in the kernel folder.
