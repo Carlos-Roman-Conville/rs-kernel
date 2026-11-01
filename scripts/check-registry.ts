@@ -1,4 +1,8 @@
 import { parse } from '../src/units.ts'
+import type { EventContract, PayloadField } from '../src/events.ts'
+
+export type { EventContract, PayloadField }
+export interface EventContracts { events: EventContract[] }
 
 export interface MechanismRow {
   id: string
@@ -324,6 +328,37 @@ export function checkFieldWarnings(registry: RegistryData, declarations: Declara
   return [...warnings].sort()
 }
 
+/** Advisory event vocabulary checks; contracts never contribute to failures. */
+export function checkEventContracts(registry: RegistryData, events: EventContracts): string[] {
+  const { resolve, quantities } = registryIndex(registry)
+  const mechanisms = new Set(registry.mechanisms.filter(row => row.kind === 'mechanism').map(row => resolve(row.id)))
+  const warnings: string[] = []
+  const seen = new Set<string>()
+  for (const event of events.events) {
+    const warn = (message: string) => warnings.push(`warning: ${event.type}: ${message}`)
+    if (seen.has(event.type)) warn('duplicate event type')
+    seen.add(event.type)
+    if (!mechanisms.has(resolve(event.producer))) warn(`producer ${event.producer} is not a mechanism row`)
+    for (const consumer of event.consumers) {
+      if (!mechanisms.has(resolve(consumer))) warn(`consumer ${consumer} is not a mechanism row`)
+    }
+    for (const [name, field] of Object.entries(event.payload)) {
+      const quantity = field.quantity === undefined ? undefined : quantities.get(resolve(field.quantity))
+      if (field.quantity !== undefined && !quantity) warn(`field ${name} quantity ${field.quantity} absent from quantities.json`)
+      if (field.unit !== undefined) {
+        let dimension: string | undefined
+        try { dimension = parse(field.unit).dim.join(',') } catch { warn(`field ${name} unit ${JSON.stringify(field.unit)} does not parse`) }
+        const want = quantity && dimensionOf(quantity.unit)
+        if (dimension !== undefined && want && dimension !== want) {
+          warn(`field ${name} unit ${field.unit} differs in dimension from the quantity unit ${quantity!.unit}`)
+        }
+      }
+      if (field.kind === 'list' && field.of === undefined) warn(`field ${name} list has no of`)
+    }
+  }
+  return warnings.sort()
+}
+
 if (typeof process !== 'undefined' && process.argv[1]?.endsWith('check-registry.ts')) {
   const { readFileSync, existsSync } = await import('node:fs')
   const args = process.argv.slice(2)
@@ -347,5 +382,7 @@ if (typeof process !== 'undefined' && process.argv[1]?.endsWith('check-registry.
   for (const line of failures) console.log(line)
   for (const line of checkWarnings(registry, declarations, { all })) console.log(line)
   for (const line of checkFieldWarnings(registry, declarations, { all })) console.log(line)
+  const events = load('events.json') as EventContracts | null
+  if (events) for (const line of checkEventContracts(registry, events)) console.log(line)
   process.exit(failures.length ? 1 : 0)
 }

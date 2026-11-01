@@ -12,6 +12,33 @@ export interface KernelEvent {
   readonly cause?: string
 }
 
+export interface PayloadField {
+  kind: 'number' | 'integer' | 'string' | 'boolean' | 'id' | 'list'
+  of?: PayloadField['kind']
+  quantity?: string
+  unit?: string
+  required: boolean
+}
+
+export interface EventContract {
+  type: string
+  producer: string
+  consumers: string[]
+  cause: 'required' | 'optional'
+  payload: Record<string, PayloadField>
+  notes?: string
+}
+
+function matchesKind(value: unknown, kind: PayloadField['kind'], of?: PayloadField['kind']): boolean {
+  switch (kind) {
+    case 'number': return typeof value === 'number' && Number.isFinite(value)
+    case 'integer': return typeof value === 'number' && Number.isInteger(value)
+    case 'id': return typeof value === 'string' && value.trim().length > 0
+    case 'list': return Array.isArray(value) && (of === undefined || value.every(item => matchesKind(item, of)))
+    default: return typeof value === kind
+  }
+}
+
 /** Reader's position in the scheduler; later emissions at this instant are hidden. */
 export interface EventReader extends OrderPosition { readonly t: SimTime }
 
@@ -53,6 +80,32 @@ const eventId = (sequence: number) => `evt.${String(sequence).padStart(6, '0')}`
 export class EventBus {
   private counter = 0
   private records: EventRecord[] = []
+  private readonly options: {
+    contracts?: ReadonlyMap<string, EventContract>
+    onViolation?: (message: string, event: KernelEvent) => void
+  }
+
+  constructor(options: {
+    contracts?: ReadonlyMap<string, EventContract>
+    onViolation?: (message: string, event: KernelEvent) => void
+  } = {}) { this.options = options }
+
+  private checkContract(event: KernelEvent): void {
+    if (!this.options.contracts) return
+    const warn = (message: string) => {
+      // Diagnostics are advisory, even if a host hook throws or mutates its copy.
+      try { this.options.onViolation?.(`warning: ${event.type}: ${message}`, structuredClone(event)) } catch {}
+    }
+    const contract = this.options.contracts.get(event.type)
+    if (!contract) { warn('unknown event type'); return }
+    if (contract.cause === 'required' && event.cause === undefined) warn('missing required cause')
+    const payload = event.payload !== null && typeof event.payload === 'object' ? event.payload as Record<string, unknown> : {}
+    for (const [name, field] of Object.entries(contract.payload)) {
+      if (!Object.hasOwn(payload, name) || payload[name] === undefined) {
+        if (field.required) warn(`missing required field ${name}`)
+      } else if (!matchesKind(payload[name], field.kind, field.of)) warn(`field ${name} has wrong kind (expected ${field.kind})`)
+    }
+  }
 
   readonly emit = (input: ScheduledEmission): KernelEvent => {
     validatePosition(input)
@@ -71,6 +124,7 @@ export class EventBus {
     const result = structuredClone(event)
     this.records.push({ event, phase: input.phase, position: input.position, sequence })
     this.counter = sequence
+    this.checkContract(event)
     return result
   }
 

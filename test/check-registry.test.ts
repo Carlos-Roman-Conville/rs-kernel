@@ -5,7 +5,8 @@ import aliases from './fixtures/registry/aliases.json' with { type: 'json' }
 import kernel from './fixtures/registry/kernel.json' with { type: 'json' }
 import unrelated from './fixtures/registry/unrelated.json' with { type: 'json' }
 import retired from './fixtures/registry/retired.json' with { type: 'json' }
-import { checkRegistry, checkWarnings, checkFieldWarnings, type Declaration, type RegistryData } from '../scripts/check-registry.ts'
+import events from './fixtures/registry/events.json' with { type: 'json' }
+import { checkRegistry, checkWarnings, checkFieldWarnings, checkEventContracts, type EventContracts, type Declaration, type RegistryData } from '../scripts/check-registry.ts'
 
 const registry = (): RegistryData => structuredClone({
   mechanisms: mechanisms.mechanisms, quantities: quantities.quantities, aliases: aliases.aliases,
@@ -578,5 +579,42 @@ describe('checkWarnings', () => {
     const r: RegistryData = { mechanisms: [{ id: 'a', kind: 'mechanism', status: 'built', reads: ['q'], writes: ['q'] }] }
     expect(checkWarnings(r, [{ file: 'empty.json' }], { all: true })).toEqual([])
     expect(checkWarnings({ mechanisms: [] }, [])).toEqual([])
+  })
+})
+
+describe('checkEventContracts', () => {
+  it('returns only advisory warnings for every bad fixture field', () => {
+    expect(checkEventContracts(registry(), events as EventContracts)).toEqual([
+      'warning: temperature.changed: consumer missing is not a mechanism row',
+      'warning: temperature.changed: duplicate event type',
+      'warning: temperature.changed: field ids list has no of',
+      'warning: temperature.changed: field invalidUnit unit "bogus" does not parse',
+      'warning: temperature.changed: field temperature unit s differs in dimension from the quantity unit K',
+      'warning: temperature.changed: field unknown quantity missing absent from quantities.json',
+      'warning: temperature.changed: producer t.restated is not a mechanism row',
+    ])
+    expect(checkRegistry(registry(), [declaration()])).toEqual([])
+  })
+
+  it('accepts empty vocabularies and valid contracts with mechanism and quantity aliases', () => {
+    const r = registry()
+    r.aliases!.push({ old: 'old.temp', new: 'body.temp' })
+    const row = structuredClone(events.events[0]) as EventContracts['events'][number]
+    row.producer = 't.body.old_name'
+    row.payload.temperature.quantity = 'old.temp'
+    expect(checkEventContracts(r, { events: [] })).toEqual([])
+    expect(checkEventContracts(r, { events: [row] })).toEqual([])
+  })
+
+  it('accepts planned mechanism rows and warns for quantities used as mechanisms', () => {
+    const row = structuredClone(events.events[0]) as EventContracts['events'][number]
+    row.producer = 't.planned.thing'
+    expect(checkEventContracts(registry(), { events: [row] })).toEqual([])
+    row.producer = 'body.temp'
+    row.consumers = ['t.restated']
+    expect(checkEventContracts(registry(), { events: [row] })).toEqual([
+      'warning: temperature.changed: consumer t.restated is not a mechanism row',
+      'warning: temperature.changed: producer body.temp is not a mechanism row',
+    ])
   })
 })

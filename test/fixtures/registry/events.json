@@ -1,0 +1,20 @@
+{
+  "events": [
+    {
+      "type": "temperature.changed", "producer": "t.body.heat", "consumers": ["t.body.old_name"], "cause": "optional",
+      "payload": {
+        "temperature": { "kind": "number", "quantity": "body.temp", "unit": "degC", "required": true },
+        "ids": { "kind": "list", "of": "id", "required": false }
+      }
+    },
+    {
+      "type": "temperature.changed", "producer": "t.restated", "consumers": ["missing"], "cause": "required",
+      "payload": {
+        "unknown": { "kind": "number", "quantity": "missing", "required": false },
+        "invalidUnit": { "kind": "number", "unit": "bogus", "required": false },
+        "temperature": { "kind": "number", "quantity": "body.temp", "unit": "s", "required": true },
+        "ids": { "kind": "list", "required": true }
+      }
+    }
+  ]
+}

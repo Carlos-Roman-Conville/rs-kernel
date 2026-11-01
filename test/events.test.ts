@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { EventBus, Scheduler, type ScheduledEmission } from '../src/index.ts'
+import { EventBus, Scheduler, type ScheduledEmission, type EventContract, type PayloadField } from '../src/index.ts'
 
 const emission = (overrides: Partial<ScheduledEmission> = {}): ScheduledEmission => ({
   t: 10, phase: 0, position: 0, source: 'first', type: 'changed', payload: { value: 1 }, ...overrides,
@@ -153,5 +153,91 @@ describe('events: DESIGN 2.3', () => {
     expect(() => bus.restore({ counter: 1, records: [{ ...before.records[0], sequence: 2 }] })).toThrow()
     expect(bus.state()).toEqual(before)
     expect(bus.emit(emission()).id).toBe('evt.000002')
+  })
+})
+
+describe('advisory event contracts', () => {
+  const contract = (payload: Record<string, PayloadField> = {}): EventContract => ({
+    type: 'changed', producer: 'first', consumers: [], cause: 'optional', payload,
+  })
+  const setup = (row = contract()) => {
+    const onViolation = vi.fn()
+    const bus = new EventBus({ contracts: new Map([[row.type, row]]), onViolation })
+    return { bus, onViolation }
+  }
+
+  it('reports unknown types and still emits unchanged events', () => {
+    const { bus, onViolation } = setup()
+    const event = bus.emit(emission({ type: 'unknown' }))
+    expect(onViolation).toHaveBeenCalledExactlyOnceWith('warning: unknown: unknown event type', event)
+    expect(bus.since()).toEqual([event])
+  })
+
+  it.each([null, {}, { value: undefined }])('reports required fields missing from %s', payload => {
+    const { bus, onViolation } = setup(contract({ value: { kind: 'number', required: true } }))
+    const event = bus.emit(emission({ payload }))
+    expect(onViolation).toHaveBeenCalledExactlyOnceWith('warning: changed: missing required field value', event)
+    expect(event.payload).toEqual(payload)
+  })
+
+  it.each([
+    ['number', 1.5, '1'], ['number', 0, Infinity], ['number', -1, NaN],
+    ['integer', 2, 1.5], ['string', '', 1], ['boolean', false, 0],
+    ['id', 'entity.1', '  '], ['id', 'entity.1', 1],
+    ['list', [], {}],
+  ] as [PayloadField['kind'], unknown, unknown][])('checks %s values without rejecting delivery', (kind, valid, invalid) => {
+    const { bus, onViolation } = setup(contract({ value: { kind, required: true } }))
+    bus.emit(emission({ payload: { value: valid } }))
+    expect(onViolation).not.toHaveBeenCalled()
+    const event = bus.emit(emission({ payload: { value: invalid } }))
+    expect(onViolation).toHaveBeenCalledExactlyOnceWith(
+      `warning: changed: field value has wrong kind (expected ${kind})`, event)
+    expect(bus.since()).toHaveLength(2)
+  })
+
+  it('checks list elements and accepts absent optional fields and extra fields', () => {
+    const { bus, onViolation } = setup(contract({ ids: { kind: 'list', of: 'id', required: false } }))
+    for (const payload of [{}, { extra: true }, { ids: [] }, { ids: ['a'] }]) bus.emit(emission({ payload }))
+    expect(onViolation).not.toHaveBeenCalled()
+    bus.emit(emission({ payload: { ids: ['a', 3] } }))
+    expect(onViolation).toHaveBeenCalledOnce()
+  })
+
+  it('reports missing required cause but accepts an explicit cause', () => {
+    const { bus, onViolation } = setup({ ...contract(), cause: 'required' })
+    const event = bus.emit(emission())
+    expect(onViolation).toHaveBeenCalledExactlyOnceWith('warning: changed: missing required cause', event)
+    bus.emit(emission({ cause: event.id }))
+    expect(onViolation).toHaveBeenCalledOnce()
+  })
+
+  it('keeps no-contract behaviour and defaults the diagnostic hook to a no-op', () => {
+    const onViolation = vi.fn()
+    const input = emission({ type: 'arbitrary', payload: null })
+    const baseline = new EventBus().emit(input)
+    expect(new EventBus({ onViolation }).emit(input)).toEqual(baseline)
+    expect(onViolation).not.toHaveBeenCalled()
+    expect(new EventBus({ contracts: new Map() }).emit(input)).toEqual(baseline)
+  })
+
+  it('isolates hook mutations and exceptions from stored and returned events', () => {
+    const bus = new EventBus({ contracts: new Map(), onViolation: (_message, event) => {
+      (event.payload as { value: number }).value = 99
+      throw new Error('host hook')
+    } })
+    const event = bus.emit(emission())
+    expect(event.payload).toEqual({ value: 1 })
+    expect(bus.since()).toEqual([event])
+  })
+
+  it('restore does not call the hook and subsequent emissions still check contracts', () => {
+    const original = new EventBus()
+    original.emit(emission({ type: 'unknown' }))
+    const { bus, onViolation } = setup()
+    bus.restore(original.state())
+    expect(onViolation).not.toHaveBeenCalled()
+    expect(bus.state()).toEqual(original.state())
+    expect(bus.emit(emission({ type: 'unknown' })).id).toBe('evt.000002')
+    expect(onViolation).toHaveBeenCalledOnce()
   })
 })
