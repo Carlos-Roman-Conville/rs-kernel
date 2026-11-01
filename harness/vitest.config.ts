@@ -1,4 +1,4 @@
 import { defineConfig } from 'vitest/config'
 
-// The realism runs are 7 and 30 simulated days at 60 s steps.
-export default defineConfig({ test: { testTimeout: 600000 } })
+// The 30-day 1 s runs are periodic validation (PLATFORM §11b); on a busy machine they take tens of minutes (KRN-30).
+export default defineConfig({ test: { testTimeout: 3600000 } })

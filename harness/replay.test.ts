@@ -123,7 +123,7 @@ describe('P0 replay from the initial state and seed', () => {
     expect(canonical(first.recording)).toBe(saved)
     expect(Object.keys(replay.final.kernel.rng)).toEqual([mechanism])
     expect(replay.final.kernel.eventCounter).toBeGreaterThan(0)
-  }, 1_200_000) // Two full 1 s runs need twice the harness's single-run timeout.
+  }, 7_200_000) // Two full 1 s runs need twice the harness's single-run timeout.
 
   it('over 3 days, a second seed changes realism stochastic state while settlement and economy stay canonical-equal', () => {
     const first = run(3, 42)
