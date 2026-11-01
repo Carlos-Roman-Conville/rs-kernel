@@ -16,4 +16,8 @@ the transfer trace is stored as its count and `fnv1a64` of `canonical(trace.tran
 2698: `settlement-A1.json` and `settlement-hamlet-30.json` re-recorded from settlement 0d76869 (person-hours, decay, status
 writer); explained key by key in ADOPTION.md `### 2698`.
 
+5092: `settlement-A1.json` and `settlement-hamlet-30.json` re-recorded at settlement 4a9d127: the only change is the
+`postFilled` events that settlement 7e49d3c (unit 3047, IF-27) adds to every hire (2 in A1, 1 in hamlet); state and
+ledger unchanged.
+
 Rewrite only with `npm run golden:write` (never in an adoption unit).
