@@ -1,0 +1,1832 @@
+{
+  "generated": "2026-11-01",
+  "source": "unit 3011 (draft for the registry keeper)",
+  "events": [
+    {
+      "type": "act",
+      "producer": "society.organisation.actors",
+      "producer_code": "society/src/organisation.ts:262",
+      "consumers": [
+        "society.institution.formation_dissolution",
+        "society.organisation.collective_choice"
+      ],
+      "consumer_code": [
+        "society/src/institution.ts:14",
+        "society/src/choice.ts:226"
+      ],
+      "cause": "required",
+      "payload": {
+        "sanctionApplied": {
+          "kind": "boolean",
+          "required": false
+        },
+        "revenueCollected": {
+          "kind": "number",
+          "required": false
+        },
+        "activity": {
+          "kind": "string",
+          "required": false
+        },
+        "person": {
+          "kind": "id",
+          "required": false
+        },
+        "component": {
+          "kind": "number",
+          "required": false
+        },
+        "org": {
+          "kind": "id",
+          "required": false
+        },
+        "due_at": {
+          "kind": "number",
+          "required": false
+        },
+        "status": {
+          "kind": "string",
+          "required": false
+        },
+        "eventId": {
+          "kind": "string",
+          "required": false
+        },
+        "event": {
+          "kind": "string",
+          "required": false
+        },
+        "outcome": {
+          "kind": "string",
+          "required": false
+        },
+        "reason": {
+          "kind": "string",
+          "required": false
+        },
+        "proposalId": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/organisation.ts:262",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. Open variants include dues/service due fields, benefits, person/component/sanction and collective-choice proposalId/outcome/reason/tally. These are not one closed payload type; complex and variant fields are not exhaustively flattened. Additional producer society.organisation.collective_choice returns ChoiceEvent at society/src/choice.ts:152, stored by society/src/organisation.ts:214. Typed variants: DueObligation at organisation.ts:30 and ChoiceEvent at choice.ts:33; omitted nested benefit, sanction, tally and tieBreak."
+    },
+    {
+      "type": "arrived",
+      "producer": "economy.trade.shipment",
+      "producer_code": "economy/src/tick/index.ts:33",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "shipment": {
+          "kind": "string",
+          "required": true
+        },
+        "to": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "units": {
+          "kind": "number",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:22",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "bought",
+      "producer": "economy.trade.trade",
+      "producer_code": "economy/src/commands.ts:232",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "inventory": {
+          "kind": "string",
+          "required": true
+        },
+        "market": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "units": {
+          "kind": "number",
+          "required": true
+        },
+        "price": {
+          "kind": "number",
+          "required": true,
+          "quantity": "economy.price",
+          "unit": "money/count"
+        },
+        "amount": {
+          "kind": "number",
+          "required": true
+        },
+        "txn": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:20",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "businessStatusChanged",
+      "producer": "settlement.business.staffing",
+      "producer_code": "settlement/src/commands.ts:505",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "biz": {
+          "kind": "string",
+          "required": true
+        },
+        "from": {
+          "kind": "string",
+          "required": true
+        },
+        "to": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:10",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "cognition.attribution",
+      "producer": "cognition.learning.attribution",
+      "producer_code": "cognition/src/process.ts:65",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "cognition/bench/hungry-pair/acceptance.ts:76",
+        "cognition/bench/hungry-pair/world.ts:561",
+        "history/src/observer.ts:42"
+      ],
+      "cause": "required",
+      "payload": {
+        "mind": {
+          "kind": "string",
+          "required": true
+        },
+        "intention": {
+          "kind": "string",
+          "required": true
+        },
+        "t": {
+          "kind": "number",
+          "required": true
+        },
+        "observations": {
+          "kind": "list",
+          "required": true
+        },
+        "outcome": {
+          "kind": "string",
+          "required": true
+        },
+        "reward": {
+          "kind": "number",
+          "required": true
+        },
+        "expectedUtility": {
+          "kind": "number",
+          "required": true,
+          "quantity": "mind.expected_utility",
+          "unit": "1"
+        },
+        "predictionError": {
+          "kind": "number",
+          "required": true,
+          "quantity": "mind.prediction_error",
+          "unit": "1"
+        },
+        "updates": {
+          "kind": "list",
+          "required": true
+        },
+        "attributedCause": {
+          "kind": "string",
+          "required": true
+        },
+        "epsilonAttribution": {
+          "kind": "number",
+          "required": true
+        },
+        "likelihoodFloor": {
+          "kind": "number",
+          "required": true
+        },
+        "episode": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "LearningTrace, cognition/src/learning.ts:73; CognitionEmission, cognition/src/mind.ts:82",
+      "notes": "observations and updates contain objects, which have no supported of kind. Fixture reporting is not a registered mechanism."
+    },
+    {
+      "type": "cognition.intention",
+      "producer": "cognition.decision.select",
+      "producer_code": "cognition/src/process.ts:65",
+      "consumers": [
+        "cognition.decision.select",
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "cognition/src/process.ts:69",
+        "cognition/bench/hungry-pair/world.ts:194",
+        "cognition/bench/hungry-pair/acceptance.ts:41",
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "id": {
+          "kind": "string",
+          "required": true
+        },
+        "mind": {
+          "kind": "id",
+          "required": true
+        },
+        "action": {
+          "kind": "string",
+          "required": true
+        },
+        "target": {
+          "kind": "id",
+          "required": false
+        },
+        "t": {
+          "kind": "number",
+          "required": true
+        },
+        "status": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "Intention, cognition/src/types.ts:195; CognitionEmission, cognition/src/mind.ts:80",
+      "notes": "Omitted unsupported object fields: terms? (numeric record), expectedOutcomes (required CategoricalBelief). Emitted spelling differs from quantity mind.intention. Fixture host has no matching registry mechanism."
+    },
+    {
+      "type": "consumed",
+      "producer": "economy.consumption.demand",
+      "producer_code": "economy/src/tick/index.ts:75",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "market": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "units": {
+          "kind": "number",
+          "required": true
+        },
+        "unmet": {
+          "kind": "number",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:15",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "crisis",
+      "producer": null,
+      "producer_code": "realism/src/medicine.ts:208",
+      "consumers": [],
+      "consumer_code": [
+        "realism/src/crisis.ts:53"
+      ],
+      "cause": "required",
+      "payload": {
+        "kind": {
+          "kind": "string",
+          "required": true
+        },
+        "body": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": true
+        },
+        "source": {
+          "kind": "string",
+          "required": true
+        },
+        "startedAt": {
+          "kind": "number",
+          "required": true
+        },
+        "durationSeconds": {
+          "kind": "number",
+          "required": true
+        },
+        "risk": {
+          "kind": "number",
+          "required": true
+        },
+        "day": {
+          "kind": "number",
+          "required": false
+        },
+        "organ": {
+          "kind": "string",
+          "required": false
+        },
+        "function": {
+          "kind": "number",
+          "required": false
+        },
+        "remainingCapacity": {
+          "kind": "number",
+          "required": false
+        },
+        "resolvedAt": {
+          "kind": "number",
+          "required": false
+        },
+        "resolved": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "Crisis, realism/src/crisis.ts:17; medicine literal, realism/src/medicine.ts:209",
+      "notes": "Local emit helper appends Crisis records, not Kernel events. Multiple producers (medicine disease/exposure/treatment and anatomy/circulation paths); no unique mechanism, producer=null. risk and function may be null; omitted death? object. cause is required textual explanation in the record, not a Kernel causal edge. body.crisis is a declared quantity, not an emitted type. Consumer allCrises is a generic query with no matching mechanism id; not an inferred Life consumer."
+    },
+    {
+      "type": "dayEnded",
+      "producer": "economy.infra.tick_scheduler",
+      "producer_code": "economy/src/tick/index.ts:99",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "day": {
+          "kind": "number",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:23",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "dissolved",
+      "producer": "society.institution.formation_dissolution",
+      "producer_code": "society/src/formation.ts:188",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "required",
+      "payload": {},
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/formation.ts:188",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. Default empty payload."
+    },
+    {
+      "type": "expelled",
+      "producer": "society.organisation.actors",
+      "producer_code": "society/src/organisation.ts:431",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "required",
+      "payload": {
+        "person": {
+          "kind": "id",
+          "required": false
+        }
+      },
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/organisation.ts:431",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. "
+    },
+    {
+      "type": "fixture.outcome",
+      "producer": null,
+      "producer_code": "cognition/bench/hungry-pair/world.ts:334",
+      "consumers": [
+        "cognition.learning.outcome",
+        "cognition.learning.attribution",
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "cognition/src/process.ts:74",
+        "cognition/bench/hungry-pair/world.ts:519",
+        "history/src/observer.ts:42"
+      ],
+      "cause": "required",
+      "payload": {
+        "intention": {
+          "kind": "string",
+          "required": true
+        },
+        "mind": {
+          "kind": "string",
+          "required": true
+        },
+        "action": {
+          "kind": "string",
+          "required": true
+        },
+        "result": {
+          "kind": "string",
+          "required": true
+        },
+        "reason": {
+          "kind": "string",
+          "required": true
+        },
+        "hunger": {
+          "kind": "number",
+          "required": true
+        },
+        "safety": {
+          "kind": "number",
+          "required": true
+        },
+        "social_connection": {
+          "kind": "number",
+          "required": true
+        },
+        "stock": {
+          "kind": "number",
+          "required": true
+        }
+      },
+      "evidence": "Outcome, cognition/bench/hungry-pair/world.ts:45; literal at :330",
+      "notes": "Bench-only host; no matching mechanism. Omitted promise? object {speaker: string, result: kept|broken}. outcomeTypes explicitly includes this spelling at world.ts:180."
+    },
+    {
+      "type": "fixtureChanged",
+      "producer": "settlement.project.layout_versions",
+      "producer_code": "settlement/src/commands.ts:396",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "bldg": {
+          "kind": "string",
+          "required": true
+        },
+        "fixtures": {
+          "kind": "list",
+          "required": true,
+          "of": "string"
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:12",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Other producers: settlement/src/commands.ts:457, settlement/src/commands.ts:467."
+    },
+    {
+      "type": "founded",
+      "producer": "society.institution.formation_dissolution",
+      "producer_code": "society/src/organisation.ts:175",
+      "consumers": [
+        "society.institution.formation_dissolution"
+      ],
+      "consumer_code": [
+        "society/src/institution.ts:14",
+        "society/src/formation.ts:133"
+      ],
+      "cause": "required",
+      "payload": {
+        "admissionFeeCollected": {
+          "kind": "number",
+          "required": false
+        },
+        "revenueCollected": {
+          "kind": "number",
+          "required": false
+        },
+        "founding": {
+          "kind": "string",
+          "required": false
+        },
+        "purpose": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/organisation.ts:175",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. Founding details are extensible; see literal at organisation.ts:175. Literal also includes founding and purpose."
+    },
+    {
+      "type": "goodDefined",
+      "producer": "economy.recipe.definition",
+      "producer_code": "economy/src/commands.ts:67",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:7",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "government.appropriation",
+      "producer": "government.fiscal.spending",
+      "producer_code": "government/src/fiscal/spending.ts:97",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "law": {
+          "kind": "id",
+          "required": true
+        },
+        "treasury": {
+          "kind": "string",
+          "required": true
+        },
+        "payee": {
+          "kind": "string",
+          "required": true
+        },
+        "due": {
+          "kind": "number",
+          "required": true
+        },
+        "paid": {
+          "kind": "number",
+          "required": true
+        },
+        "unfunded": {
+          "kind": "number",
+          "required": true
+        },
+        "unit": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "Appropriation, government/src/fiscal/spending.ts:16",
+      "notes": "Returned record only; no emit adapter or consumer found. paid is allocated, not confirmed payment. Units are host-selected; no exact registry quantity mapping."
+    },
+    {
+      "type": "government.succession_event",
+      "producer": "government.succession.institutional",
+      "producer_code": "government/src/succession/succession.ts:123",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "office": {
+          "kind": "string",
+          "required": true
+        },
+        "successor": {
+          "kind": "string",
+          "required": true
+        },
+        "law": {
+          "kind": "id",
+          "required": true
+        }
+      },
+      "evidence": "SuccessionResolution, government/src/succession/succession.ts:15",
+      "notes": "Returned resolution only; no emit adapter or implemented consumer found. Omitted required basis: SuccessionRule object. Comment at :103 proposes host mapping to Settlement appoint; not counted as an implemented consumer."
+    },
+    {
+      "type": "government.tax_assessment",
+      "producer": "government.fiscal.taxation",
+      "producer_code": "government/src/fiscal/tax.ts:68",
+      "consumers": [
+        "government.fiscal.taxation"
+      ],
+      "consumer_code": [
+        "government/src/fiscal/tax.ts:116",
+        "government/src/fiscal/tax.ts:136"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "law": {
+          "kind": "id",
+          "required": true
+        },
+        "payer": {
+          "kind": "string",
+          "required": true
+        },
+        "base": {
+          "kind": "number",
+          "required": true
+        },
+        "baseRead": {
+          "kind": "string",
+          "required": true
+        },
+        "owed": {
+          "kind": "number",
+          "required": true
+        },
+        "unit": {
+          "kind": "string",
+          "required": true
+        },
+        "day": {
+          "kind": "number",
+          "required": true
+        },
+        "reason": {
+          "kind": "string",
+          "required": true
+        },
+        "treasury": {
+          "kind": "string",
+          "required": true
+        },
+        "collector": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "TaxAssessment, government/src/fiscal/tax.ts:10",
+      "notes": "Returned assessment only; no emit adapter found. base, owed, unit, reason, collector are required but nullable. Omitted required Act object. Monetary dimensions are host-selected by unit/baseRead; no exact registry quantity mapping."
+    },
+    {
+      "type": "inventoryOpened",
+      "producer": "economy.inventory.holdings",
+      "producer_code": "economy/src/commands.ts:98",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "inventory": {
+          "kind": "string",
+          "required": true
+        },
+        "holder": {
+          "kind": "string",
+          "required": true
+        },
+        "market": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:9",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "joined",
+      "producer": "society.organisation.actors",
+      "producer_code": "society/src/organisation.ts:304",
+      "consumers": [
+        "society.institution.formation_dissolution"
+      ],
+      "consumer_code": [
+        "society/src/institution.ts:14",
+        "society/src/formation.ts:219"
+      ],
+      "cause": "required",
+      "payload": {
+        "admissionFeeCollected": {
+          "kind": "number",
+          "required": false
+        },
+        "revenueCollected": {
+          "kind": "number",
+          "required": false
+        }
+      },
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/organisation.ts:304",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. "
+    },
+    {
+      "type": "leaseChanged",
+      "producer": "settlement.property.lease",
+      "producer_code": "settlement/src/commands.ts:254",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "lease": {
+          "kind": "string",
+          "required": true
+        },
+        "title": {
+          "kind": "string",
+          "required": true
+        },
+        "tenant": {
+          "kind": "string",
+          "required": true
+        },
+        "status": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:7",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Other producers: settlement/src/commands.ts:264."
+    },
+    {
+      "type": "left",
+      "producer": "society.organisation.actors",
+      "producer_code": "society/src/organisation.ts:242",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "required",
+      "payload": {
+        "person": {
+          "kind": "id",
+          "required": false
+        }
+      },
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/organisation.ts:242",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. Person appears for removal at organisation.ts:450; accepted leave and split exit omit it."
+    },
+    {
+      "type": "managerChanged",
+      "producer": "settlement.business.open",
+      "producer_code": "settlement/src/commands.ts:522",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "biz": {
+          "kind": "string",
+          "required": true
+        },
+        "from": {
+          "kind": "string",
+          "required": true
+        },
+        "to": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:9",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Nullable required fields (kind describes non-null branch): from, to."
+    },
+    {
+      "type": "marketGoodSet",
+      "producer": "economy.market.five_numbers",
+      "producer_code": "economy/src/commands.ts:123",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "market": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:11",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "marketOpened",
+      "producer": "economy.market.five_numbers",
+      "producer_code": "economy/src/commands.ts:109",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "market": {
+          "kind": "string",
+          "required": true
+        },
+        "mode": {
+          "kind": "string",
+          "required": true
+        },
+        "inventory": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:10",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "merged",
+      "producer": "society.institution.formation_dissolution",
+      "producer_code": "society/src/formation.ts:261",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "required",
+      "payload": {
+        "source": {
+          "kind": "id",
+          "required": false
+        },
+        "survivor": {
+          "kind": "id",
+          "required": false
+        }
+      },
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/formation.ts:261",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. "
+    },
+    {
+      "type": "officeChanged",
+      "producer": "settlement.authority.office_powers",
+      "producer_code": "settlement/src/commands.ts:617",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "office": {
+          "kind": "string",
+          "required": true
+        },
+        "holder": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:15",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Nullable required fields (kind describes non-null branch): holder. Other producers: settlement/src/commands.ts:624."
+    },
+    {
+      "type": "office_changed",
+      "producer": "society.organisation.actors",
+      "producer_code": "society/src/organisation.ts:425",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "required",
+      "payload": {
+        "role": {
+          "kind": "string",
+          "required": false
+        },
+        "holder": {
+          "kind": "id",
+          "required": false
+        }
+      },
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/organisation.ts:425",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. "
+    },
+    {
+      "type": "operatorChanged",
+      "producer": "settlement.business.open",
+      "producer_code": "settlement/src/commands.ts:515",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "biz": {
+          "kind": "string",
+          "required": true
+        },
+        "from": {
+          "kind": "string",
+          "required": true
+        },
+        "to": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:8",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "organisationOpened",
+      "producer": "economy.org.organisation",
+      "producer_code": "economy/src/commands.ts:200",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "organisation": {
+          "kind": "string",
+          "required": true
+        },
+        "name": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:18",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "parcelMerged",
+      "producer": "settlement.land.parcel_split_merge",
+      "producer_code": "settlement/src/commands.ts:157",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "parcels": {
+          "kind": "list",
+          "required": true,
+          "of": "string"
+        },
+        "result": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:18",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "parcelSplit",
+      "producer": "settlement.land.parcel_split_merge",
+      "producer_code": "settlement/src/commands.ts:130",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "parent": {
+          "kind": "string",
+          "required": true
+        },
+        "children": {
+          "kind": "list",
+          "required": true,
+          "of": "string"
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:17",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "permissionChanged",
+      "producer": "settlement.authority.office_powers",
+      "producer_code": "settlement/src/commands.ts:636",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "permission": {
+          "kind": "string",
+          "required": true
+        },
+        "status": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:16",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Other producers: settlement/src/commands.ts:646, settlement/src/tick/expiry.ts:13."
+    },
+    {
+      "type": "postFilled",
+      "producer": "settlement.assign.workforce",
+      "producer_code": "settlement/src/commands.ts:587",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "post": {
+          "kind": "string",
+          "required": true
+        },
+        "holder": {
+          "kind": "string",
+          "required": true
+        },
+        "wage": {
+          "kind": "number",
+          "required": true,
+          "quantity": "settlement.post_wage",
+          "unit": "money/d"
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:4",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "priceSet",
+      "producer": "economy.price.rule",
+      "producer_code": "economy/src/tick/index.ts:92",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "market": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "price": {
+          "kind": "number",
+          "required": true,
+          "quantity": "economy.price",
+          "unit": "money/count"
+        },
+        "was": {
+          "kind": "number",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:17",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Nullable required fields (kind describes non-null branch): was."
+    },
+    {
+      "type": "produced",
+      "producer": "economy.material.produce",
+      "producer_code": "economy/src/commands.ts:165",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "inventory": {
+          "kind": "string",
+          "required": true
+        },
+        "recipe": {
+          "kind": "string",
+          "required": true
+        },
+        "units": {
+          "kind": "number",
+          "required": true
+        },
+        "output": {
+          "kind": "string",
+          "required": true
+        },
+        "outputUnits": {
+          "kind": "number",
+          "required": true,
+          "quantity": "economy.output_units",
+          "unit": "count"
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:13",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Nullable required fields (kind describes non-null branch): output."
+    },
+    {
+      "type": "projectCompleted",
+      "producer": "settlement.project.construction",
+      "producer_code": "settlement/src/commands.ts:427",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "project": {
+          "kind": "string",
+          "required": true
+        },
+        "kind": {
+          "kind": "string",
+          "required": true
+        },
+        "target": {
+          "kind": "string",
+          "required": true
+        },
+        "result": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:11",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Nullable required fields (kind describes non-null branch): result."
+    },
+    {
+      "type": "recipeDefined",
+      "producer": "economy.recipe.definition",
+      "producer_code": "economy/src/commands.ts:89",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "recipe": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:8",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "refused",
+      "producer": null,
+      "producer_code": "economy/src/commands.ts:218",
+      "consumers": [
+        "history.record.backend",
+        "society.institution.formation_dissolution"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42",
+        "society/src/formation.ts:133",
+        "society/src/formation.ts:219"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "command": {
+          "kind": "string",
+          "required": true
+        },
+        "reason": {
+          "kind": "string",
+          "required": true
+        },
+        "price": {
+          "kind": "number",
+          "required": true,
+          "quantity": "economy.price",
+          "unit": "money/count"
+        },
+        "limit": {
+          "kind": "number",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:3",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). COLLISION: society/src/organisation.ts:121 also emits kind=refused, with required textual cause and optional open payload (outcome, reason, person, dues/benefit details); society/src/choice.ts:152 and :233 return refused variants stored at organisation.ts:214. Society producer mechanisms are society.organisation.actors and society.organisation.collective_choice, Economy producer is economy.trade.trade. No single producer or payload contract fits: producer=null; payload above describes Economy only. Society cause is explanatory text, not an event id."
+    },
+    {
+      "type": "rentPaid",
+      "producer": "settlement.property.lease",
+      "producer_code": "settlement/src/tick/wages.ts:18",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "lease": {
+          "kind": "string",
+          "required": true
+        },
+        "to": {
+          "kind": "string",
+          "required": true
+        },
+        "amount": {
+          "kind": "number",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:14",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "settlement.vacate",
+      "producer": "government.succession.institutional",
+      "producer_code": "government/src/succession/succession.ts:121",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "office": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SuccessionResolution, government/src/succession/succession.ts:16",
+      "notes": "Returned Government resolution, not a Settlement emission. No emit adapter/consumer found. Proposed host mapping at :103; Settlement vacate command emits officeChanged, not settlement.vacate."
+    },
+    {
+      "type": "shared.action.outcome",
+      "producer": "settlement.assign.workforce",
+      "producer_code": "settlement/src/commands.ts:589",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": true
+        },
+        "status": {
+          "kind": "string",
+          "required": true
+        },
+        "stimuli": {
+          "kind": "list",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:5",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Not representable in requested kind vocabulary: payload (required object), stimuli elements are objects; of omitted."
+    },
+    {
+      "type": "shipped",
+      "producer": "economy.trade.shipment",
+      "producer_code": "economy/src/commands.ts:255",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "shipment": {
+          "kind": "string",
+          "required": true
+        },
+        "from": {
+          "kind": "string",
+          "required": true
+        },
+        "to": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "units": {
+          "kind": "number",
+          "required": true
+        },
+        "arrives": {
+          "kind": "number",
+          "required": true
+        },
+        "freightTxn": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:21",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Nullable required fields (kind describes non-null branch): freightTxn."
+    },
+    {
+      "type": "shortage",
+      "producer": "economy.shortage.event",
+      "producer_code": "economy/src/tick/index.ts:79",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "market": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "stock": {
+          "kind": "number",
+          "required": true
+        },
+        "targetReserve": {
+          "kind": "number",
+          "required": true
+        },
+        "shortage": {
+          "kind": "number",
+          "required": true,
+          "quantity": "economy.shortage_fraction",
+          "unit": "1"
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:16",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "sold",
+      "producer": "economy.trade.trade",
+      "producer_code": "economy/src/commands.ts:227",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "inventory": {
+          "kind": "string",
+          "required": true
+        },
+        "market": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "units": {
+          "kind": "number",
+          "required": true
+        },
+        "price": {
+          "kind": "number",
+          "required": true,
+          "quantity": "economy.price",
+          "unit": "money/count"
+        },
+        "amount": {
+          "kind": "number",
+          "required": true
+        },
+        "txn": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:19",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "split",
+      "producer": "society.institution.formation_dissolution",
+      "producer_code": "society/src/formation.ts:229",
+      "consumers": [],
+      "consumer_code": [],
+      "cause": "required",
+      "payload": {
+        "successors": {
+          "kind": "list",
+          "required": false,
+          "of": "id"
+        },
+        "left": {
+          "kind": "list",
+          "required": false,
+          "of": "id"
+        }
+      },
+      "evidence": "OrganisationEvent / OrganisationEventPayload, society/src/types.ts:48; literal society/src/formation.ts:229",
+      "notes": "Local host emit uses kind, stores {org, kind, t, cause, intentions, payload} at society/src/organisation.ts:114. No Kernel publication found. Payload is an open Record<string, unknown>; variant keys are optional across the declared type. Omitted resourceClaims object {status, owners, source, successors, businesses}; secession also emits at formation.ts:134."
+    },
+    {
+      "type": "spoiled",
+      "producer": "economy.spoilage",
+      "producer_code": "economy/src/tick/index.ts:46",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "inventory": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "units": {
+          "kind": "number",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:14",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15). Other producers: economy/src/tick/index.ts:54."
+    },
+    {
+      "type": "stockChanged",
+      "producer": "economy.inventory.holdings",
+      "producer_code": "economy/src/context.ts:44",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "inventory": {
+          "kind": "string",
+          "required": true
+        },
+        "good": {
+          "kind": "string",
+          "required": true
+        },
+        "delta": {
+          "kind": "number",
+          "required": true
+        },
+        "reason": {
+          "kind": "string",
+          "required": true
+        },
+        "cause": {
+          "kind": "string",
+          "required": false
+        }
+      },
+      "evidence": "EconomyEvent, economy/src/events.ts:12",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "titleChanged",
+      "producer": "settlement.property.title_transfer",
+      "producer_code": "settlement/src/commands.ts:192",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "title": {
+          "kind": "string",
+          "required": true
+        },
+        "subject": {
+          "kind": "string",
+          "required": true
+        },
+        "from": {
+          "kind": "string",
+          "required": true
+        },
+        "to": {
+          "kind": "string",
+          "required": true
+        },
+        "txn": {
+          "kind": "string",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:6",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    },
+    {
+      "type": "wagePaid",
+      "producer": "settlement.wage.pay",
+      "producer_code": "settlement/src/tick/wages.ts:12",
+      "consumers": [
+        "history.record.backend"
+      ],
+      "consumer_code": [
+        "history/src/observer.ts:42"
+      ],
+      "cause": "optional",
+      "payload": {
+        "type": {
+          "kind": "string",
+          "required": true
+        },
+        "post": {
+          "kind": "string",
+          "required": true
+        },
+        "to": {
+          "kind": "string",
+          "required": true
+        },
+        "amount": {
+          "kind": "number",
+          "required": true
+        }
+      },
+      "evidence": "SettlementEvent, settlement/src/events.ts:13",
+      "notes": "Reducer event; kernel/harness/adapters.ts:30 publishes the entire event as payload, including type and any cause. The adapter does not forward cause to the Kernel envelope. Configuration events pre-dating adapter creation are skipped (line 15)."
+    }
+  ]
+}
