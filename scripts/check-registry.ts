@@ -330,6 +330,7 @@ export function checkFieldWarnings(registry: RegistryData, declarations: Declara
 
 /** Advisory event vocabulary checks; contracts never contribute to failures. */
 export function checkEventContracts(registry: RegistryData, events: EventContracts): string[] {
+  const kinds = new Set(['number', 'integer', 'string', 'boolean', 'id', 'list', 'record'])
   const { resolve, quantities } = registryIndex(registry)
   const mechanisms = new Set(registry.mechanisms.filter(row => row.kind === 'mechanism').map(row => resolve(row.id)))
   const warnings: string[] = []
@@ -343,6 +344,9 @@ export function checkEventContracts(registry: RegistryData, events: EventContrac
       if (!mechanisms.has(resolve(consumer))) warn(`consumer ${consumer} is not a mechanism row`)
     }
     for (const [name, field] of Object.entries(event.payload)) {
+      if (!kinds.has(field.kind)) warn(`field ${name} has unknown kind ${field.kind}`)
+      if (field.of !== undefined && !kinds.has(field.of)) warn(`field ${name} has unknown kind ${field.of}`)
+      if (field.nullable !== undefined && typeof field.nullable !== 'boolean') warn(`field ${name} nullable must be a boolean`)
       const quantity = field.quantity === undefined ? undefined : quantities.get(resolve(field.quantity))
       if (field.quantity !== undefined && !quantity) warn(`field ${name} quantity ${field.quantity} absent from quantities.json`)
       if (field.unit !== undefined) {

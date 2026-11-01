@@ -13,8 +13,9 @@ export interface KernelEvent {
 }
 
 export interface PayloadField {
-  kind: 'number' | 'integer' | 'string' | 'boolean' | 'id' | 'list'
+  kind: 'number' | 'integer' | 'string' | 'boolean' | 'id' | 'list' | 'record'
   of?: PayloadField['kind']
+  nullable?: boolean
   quantity?: string
   unit?: string
   required: boolean
@@ -34,6 +35,7 @@ function matchesKind(value: unknown, kind: PayloadField['kind'], of?: PayloadFie
     case 'number': return typeof value === 'number' && Number.isFinite(value)
     case 'integer': return typeof value === 'number' && Number.isInteger(value)
     case 'id': return typeof value === 'string' && value.trim().length > 0
+    case 'record': return typeof value === 'object' && value !== null && !Array.isArray(value)
     case 'list': return Array.isArray(value) && (of === undefined || value.every(item => matchesKind(item, of)))
     default: return typeof value === kind
   }
@@ -103,7 +105,9 @@ export class EventBus {
     for (const [name, field] of Object.entries(contract.payload)) {
       if (!Object.hasOwn(payload, name) || payload[name] === undefined) {
         if (field.required) warn(`missing required field ${name}`)
-      } else if (!matchesKind(payload[name], field.kind, field.of)) warn(`field ${name} has wrong kind (expected ${field.kind})`)
+      } else if (!(field.nullable === true && payload[name] === null) && !matchesKind(payload[name], field.kind, field.of)) {
+        warn(`field ${name} has wrong kind (expected ${field.kind})`)
+      }
     }
   }
 

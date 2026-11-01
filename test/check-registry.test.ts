@@ -583,6 +583,29 @@ describe('checkWarnings', () => {
 })
 
 describe('checkEventContracts', () => {
+  it('accepts record fields, lists of records, and boolean nullable flags', () => {
+    const row = structuredClone(events.events[0]) as EventContracts['events'][number]
+    row.payload.record = { kind: 'record', nullable: true, required: true }
+    row.payload.records = { kind: 'list', of: 'record', nullable: false, required: true }
+    expect(checkEventContracts(registry(), { events: [row] })).toEqual([])
+  })
+
+  it.each(['kind', 'of'] as const)('warns for unknown %s', property => {
+    const row = structuredClone(events.events[0]) as EventContracts['events'][number]
+    Object.assign(row.payload.ids, { [property]: 'object' })
+    expect(checkEventContracts(registry(), { events: [row] })).toEqual([
+      'warning: temperature.changed: field ids has unknown kind object',
+    ])
+  })
+
+  it.each([null, 0, 'true', {}])('warns for non-boolean nullable %s', nullable => {
+    const row = structuredClone(events.events[0]) as EventContracts['events'][number]
+    Object.assign(row.payload.ids, { nullable })
+    expect(checkEventContracts(registry(), { events: [row] })).toEqual([
+      'warning: temperature.changed: field ids nullable must be a boolean',
+    ])
+  })
+
   it('returns only advisory warnings for every bad fixture field', () => {
     expect(checkEventContracts(registry(), events as EventContracts)).toEqual([
       'warning: temperature.changed: consumer missing is not a mechanism row',

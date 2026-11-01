@@ -185,6 +185,8 @@ describe('advisory event contracts', () => {
     ['integer', 2, 1.5], ['string', '', 1], ['boolean', false, 0],
     ['id', 'entity.1', '  '], ['id', 'entity.1', 1],
     ['list', [], {}],
+    ['record', { nested: { arbitrary: [1, null] } }, []], ['record', {}, null],
+    ['record', {}, 'record'],
   ] as [PayloadField['kind'], unknown, unknown][])('checks %s values without rejecting delivery', (kind, valid, invalid) => {
     const { bus, onViolation } = setup(contract({ value: { kind, required: true } }))
     bus.emit(emission({ payload: { value: valid } }))
@@ -201,6 +203,38 @@ describe('advisory event contracts', () => {
     expect(onViolation).not.toHaveBeenCalled()
     bus.emit(emission({ payload: { ids: ['a', 3] } }))
     expect(onViolation).toHaveBeenCalledOnce()
+  })
+
+  it.each([null, [], 1, 'record'])('warns for non-record list element %s', invalid => {
+    const { bus, onViolation } = setup(contract({ value: { kind: 'list', of: 'record', required: true } }))
+    for (const value of [[], [{}, { arbitrary: [null, 1] }]]) bus.emit(emission({ payload: { value } }))
+    expect(onViolation).not.toHaveBeenCalled()
+    const event = bus.emit(emission({ payload: { value: [{}, invalid] } }))
+    expect(onViolation).toHaveBeenCalledExactlyOnceWith('warning: changed: field value has wrong kind (expected list)', event)
+  })
+
+  it.each(['number', 'integer', 'string', 'boolean', 'id', 'list', 'record'] as const)('accepts nullable null for %s', kind => {
+    const { bus, onViolation } = setup(contract({ value: { kind, nullable: true, required: true } }))
+    bus.emit(emission({ payload: { value: null } }))
+    expect(onViolation).not.toHaveBeenCalled()
+  })
+
+  it.each([undefined, false])('warns for null when nullable is %s', nullable => {
+    const { bus, onViolation } = setup(contract({ value: { kind: 'number', nullable, required: true } }))
+    const event = bus.emit(emission({ payload: { value: null } }))
+    expect(onViolation).toHaveBeenCalledExactlyOnceWith('warning: changed: field value has wrong kind (expected number)', event)
+  })
+
+  it.each([{}, { value: undefined }])('requires nullable fields in %s', payload => {
+    const { bus, onViolation } = setup(contract({ value: { kind: 'record', nullable: true, required: true } }))
+    const event = bus.emit(emission({ payload }))
+    expect(onViolation).toHaveBeenCalledExactlyOnceWith('warning: changed: missing required field value', event)
+  })
+
+  it('still checks non-null values of nullable fields', () => {
+    const { bus, onViolation } = setup(contract({ value: { kind: 'record', nullable: true, required: true } }))
+    const event = bus.emit(emission({ payload: { value: [] } }))
+    expect(onViolation).toHaveBeenCalledExactlyOnceWith('warning: changed: field value has wrong kind (expected record)', event)
   })
 
   it('reports missing required cause but accepts an explicit cause', () => {

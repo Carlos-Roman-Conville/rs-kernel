@@ -572,6 +572,7 @@ Economy and Settlement ledgers migrate in paired units after kernel v0.1.0; CHAI
 registry keeper (format: type, producer, consumers, cause, payload fields with kind/quantity/unit/required). The
 Kernel supplies `checkEventContracts` in `scripts/check-registry.ts` and an opt-in `EventBus` contracts hook; both
 warn and never fail until the list is populated. The Kernel holds no event list.
+The `record` kind (also valid as a list's `of`) accepts non-null, non-array objects without checking their own fields; `nullable: true` accepts a present null value while required fields must still be present.
 
 **Registry (CG-17).** The registry keeper registers the proposed rows: `kernel.resolution.handoff`,
 `kernel.transaction`, and a row for the transfer service.
