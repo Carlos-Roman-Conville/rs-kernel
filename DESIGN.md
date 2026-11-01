@@ -484,3 +484,43 @@ Reality responsibility. Below: how the Kernel handles coupled updates today (fro
   **open**, Kernel and Reality.
 - **Scale selection:** which mechanisms run detailed or aggregate where, and when the resolution hand-off fires, is the
   owning engine's; the Kernel's part is the hand-off contract (§9). **open**
+
+## 16. Consumers depend on a recorded kernel commit (proposed, for Rex; CTRL-22)
+
+**Why.** Every consumer links the kernel's live folder: `"@rex/kernel": "file:../kernel"` in settlement, economy,
+realism, cognition and catalogue; the harness links `file:..` and the engines; the pirate web links the engines the
+same way. On Windows these are junctions, so a consumer sees the kernel's uncommitted working tree. Two incidents
+followed: a recursive delete through a junction removed the kernel's and economy's `.git` (KRN-26, I-1047, I-1048), and
+a running kernel unit's half-finished type change broke Cognition's typecheck and stopped its lane (KRN-31, COG-42).
+Separate repos isolate commits, not dependencies. KRN-31's pairing rule is the interim.
+
+**Proposal.**
+- **Releases.** A kernel release is an annotated git tag `vMAJOR.MINOR.PATCH` on a committed, green kernel, made by a
+  belt unit; `package.json` `version` matches the tag. A release is cut only when the exported interface or data the
+  consumers use changes (most kernel units are internal and need none). Tags are never moved or reused.
+- **Install source.** Consumers depend on the tag in the local bare mirror that the backup keeper maintains:
+  `"@rex/kernel": "git+file:///E:/backups/reality-sim/git/kernel.git#v0.2.0"`. npm installs a **copy** (no junction)
+  and the lockfile records the full commit hash, so each consumer is pinned to a recorded commit. Tested 2026-10-31:
+  install about 8 s, offline, a real directory, `resolved` = the commit hash. Fallback if the mirror is unsuitable: a
+  packed tarball per release (`npm pack` into `kernel/dist/rex-kernel-<version>.tgz`, consumer pins
+  `file:../kernel/dist/rex-kernel-<version>.tgz`; also a copy, lockfile pins its sha512; tested: pack 4 s, install 4 s,
+  about 310 KB per release, smaller with a `files` list).
+- **Upgrades.** A consumer moves to a new release only in its own belt unit (bump the tag, `npm install`, its filtered
+  tests), paired with the release by `Needs:` (KRN-31). Until then it keeps the old commit, whatever the kernel's tree holds.
+- **The harness** tests the kernel's own working tree, so it imports the kernel by relative path (`../src/index.ts`, a
+  vitest alias) instead of a `file:..` package link, and depends on the engines at their release tags. No junction into
+  any live repo remains in the kernel folder.
+- **Every edge, same scheme.** Engines are released and consumed the same way: Life ← Reality after the split (realism
+  `SPLIT.md`), the pirate web ← realism, settlement, economy, and every planned edge. Each engine keeps its own tags.
+- **Runs record their versions.** The snapshot's `kernel` block gains `versions: Record<package, commit>` (the resolved
+  commit of the kernel and each engine in the run), so the harness and History's X1 record the compatible set per run.
+  This is a snapshot change paired with its consumers (KRN-31), after unit 2805.
+
+**Cost.** Per release: a tag and a mirror sync (seconds) plus one upgrade unit per consumer that needs it (install about
+8 s, then its own filtered tests). Today that is up to five engines, the harness and the pirate web. Consumers lag the
+kernel's tree until they upgrade, so a kernel change is exercised by the harness first and by consumers only when they
+move. Against it: the KRN-26 recovery took hours and lost 48 commits of history; COG-42 stopped a lane.
+
+**Open (Rex):** approve the scheme; choose the install source (the mirror, recommended because it records the commit
+itself and needs no build artefact; or tarballs). Then the order: kernel `v0.1.0` tag and harness relative import first,
+then one upgrade unit per consumer, then the engines' own tags and the pirate web, then the snapshot `versions` field.
