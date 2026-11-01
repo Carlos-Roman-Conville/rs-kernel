@@ -7,6 +7,7 @@
   "exports": {
     ".": "./thirty-days.ts",
     "./adapters": "./adapters.ts",
+    "./examples": "./examples.ts",
     "./thirty-days": "./thirty-days.ts"
   },
   "scripts": {
