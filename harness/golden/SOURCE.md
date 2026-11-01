@@ -22,7 +22,7 @@ ledger unchanged.
 
 5258: realism goldens (`realism-*.json`) re-recorded at realism 9cec538; every change since 15dc9d2 is explained below (bisect: realism 5158, validation/GOLDEN-DRIFT.md).
 
-Realism commits after the 5158 bisect, not bisected: 9cec538 bc42793 a3a5c8f 1008a49 289efe2 adf727e 9c69a83 0fb8379 4074843 b52d299 3ac69ca 2c7775a ddc778a d635366 0667d93 c5a4651 ab65bb4 d48370a eecf211 09bd809 2be3a09 ce0af2d cc60126 55f4443 700653e 0430dc2 688e557 cfc22cc 3c0d717 2aecc5c 672ed6b 8247021 67f82c8 (Reality keeper explains if a golden moves).
+5158 bisected realism 15dc9d2..0fb8379^ (its run HEAD). The 7 later commits to 9cec538 touch only docs, the validation reference tables (data/library/validation/, not read by these runs; a3a5c8f) and the labour-intentions provider (1008a49, not on the example paths); not bisected, no value change expected.
 
 5158: realism 4c7e6f9 (2621): Physiology owns metabolic O2 demand; RMR/Kleiber-scaled breathing intentionally changes human/horse gas exchange and ventilation, with coupled water, energy, component-state and ledger changes (flags/atmosphere.md NOTE 2621).
 5158: realism 2d8057a (2623): Shared body-water ownership and immediate traced body-mass changes intentionally alter heat capacity, metabolic demand, hydration/mass checkpoints, initialization fields and accounting checks/transfers (flags/physiology.md report 2623).
