@@ -485,7 +485,7 @@ Reality responsibility. Below: how the Kernel handles coupled updates today (fro
 - **Scale selection:** which mechanisms run detailed or aggregate where, and when the resolution hand-off fires, is the
   owning engine's; the Kernel's part is the hand-off contract (§9). **open**
 
-## 16. Consumers depend on a recorded kernel commit (proposed, for Rex; CTRL-22)
+## 16. Consumers depend on a recorded kernel commit (Rex, 2026-10-31; CTRL-22)
 
 **Why.** Every consumer links the kernel's live folder: `"@rex/kernel": "file:../kernel"` in settlement, economy,
 realism, cognition and catalogue; the harness links `file:..` and the engines; the pirate web links the engines the
@@ -532,6 +532,16 @@ release unit can sync itself (`python E:/backups/reality-sim/bin/backup.py mirro
 split a release is installable within about 5 minutes, so release notes say "wait for the mirror"; (C) lockfiles pin the
 path `E:/backups/reality-sim/git/<repo>.git`, so that path is fixed; moving the backups means rewriting every lockfile.
 
-**Open (Rex):** approve the scheme; choose the install source (the mirror, recommended because it records the commit
-itself and needs no build artefact; or tarballs). Then the order: kernel `v0.1.0` tag and harness relative import first,
-then one upgrade unit per consumer, then the engines' own tags and the pirate web, then the snapshot `versions` field.
+**(Rex, 2026-10-31)** "Approve kernel DESIGN §16 with the local mirror as the install source and tarballs as fallback.
+Keep release tags immutable, pin exact commits, upgrade consumers in paired units, and record the compatible versions per
+run. Allow releases for needed bug fixes and behavioural changes as well as interface changes. Preserve release commits
+off-machine, and track the repository-deletion root cause separately." Two amendments to the proposal above follow:
+- **When to release:** whenever a consumer needs a change (a bug fix, a behavioural change or an interface change), not
+  only on an interface change.
+- **Off-machine:** every release commit must also exist off this machine, in the GitHub `rs-*` mirror the backup keeper
+  maintains (BKP-9, waiting on Rex's token). Until that path works, a tag is cut and installable from the local mirror
+  but is **not treated as released** until the backup keeper confirms it is off-machine.
+- The deletion's root cause (a forced worktree removal traversing a `node_modules` junction) is tracked separately in
+  Card Games ISSUES I-1048.
+Order: kernel `v0.1.0` and the harness's relative import; the pirate web pinned to a realism tag; one paired upgrade
+unit per kernel consumer; the engines' own tags; the snapshot `versions` field.
