@@ -59,6 +59,7 @@ export class Scheduler {
     ids = new Set();
     buckets = new Map();
     running = false;
+    active = null;
     failed = false;
     constructor(options = {}) {
         this.time = simTime(options.start ?? 0, 'start');
@@ -67,6 +68,9 @@ export class Scheduler {
         this.sink = options.emit;
     }
     get t() { return this.time; }
+    current() {
+        return this.active ? { id: this.active.id, mechanisms: this.active.mechanisms } : null;
+    }
     /**
      * First run is strictly after registration and at/after offset (default epoch 0).
      * It closes the interval since registration; later dt values equal the period.
@@ -89,7 +93,7 @@ export class Scheduler {
         const next = offset > this.time ? offset : after(this.time, period - (this.time - offset) % period);
         const readonly = process.readonly === true;
         const entry = {
-            ...rank, last: this.time, run: process.run.bind(process),
+            ...rank, id, mechanisms: Object.freeze([...mechanisms]), last: this.time, run: process.run.bind(process),
             rng: mechanismId => {
                 if (readonly)
                     throw new Error(`read-only process ${id} may not use rng`);
@@ -156,7 +160,13 @@ export class Scheduler {
                     }
                 }
                 for (const entry of due) {
-                    entry.run({ t: next, dt: next - entry.last, rng: entry.rng, emit: entry.emit });
+                    this.active = entry;
+                    try {
+                        entry.run({ t: next, dt: next - entry.last, rng: entry.rng, emit: entry.emit });
+                    }
+                    finally {
+                        this.active = null;
+                    }
                     entry.last = next;
                 }
             }

@@ -42,9 +42,14 @@ export declare class Scheduler {
     private readonly ids;
     private readonly buckets;
     private running;
+    private active;
     private failed;
     constructor(options?: SchedulerOptions);
     get t(): SimTime;
+    current(): {
+        id: string;
+        mechanisms: readonly string[];
+    } | null;
     /**
      * First run is strictly after registration and at/after offset (default epoch 0).
      * It closes the interval since registration; later dt values equal the period.

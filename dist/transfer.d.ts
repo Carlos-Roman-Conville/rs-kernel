@@ -4,6 +4,14 @@ import { type Participant } from './transaction.ts';
 export interface TransferLedger extends Participant {
     unit(account: string, quantity: string): string;
     apply(account: string, quantity: string, delta: number): void;
+    /** Complete current holdings by unqualified account, in the owner's unit. */
+    holdings?(quantity: string): ReadonlyMap<string, number>;
+    /** Only the owner maps a view entry to the stock's native account and unit. */
+    native?(account: string, quantity: string, amount: number): {
+        account: string;
+        quantity: string;
+        amount: number;
+    };
 }
 export interface TransferEndpoint {
     readonly ledger: TransferLedger;
@@ -18,6 +26,7 @@ export interface TransferRequest {
     readonly from: TransferEndpoint;
     readonly to: TransferEndpoint;
     readonly note?: string;
+    readonly cause?: string;
 }
 export interface TransferEntry {
     t: SimTime;
@@ -28,6 +37,7 @@ export interface TransferEntry {
     from: string;
     to: string;
     note?: string;
+    cause?: string;
 }
 /** Append-only bookkeeping; snapshots and reads never share entry objects. */
 export declare class TransferJournal implements Participant {
@@ -36,11 +46,11 @@ export declare class TransferJournal implements Participant {
     constructor(id?: string);
     append(entry: TransferEntry): void;
     entries(): TransferEntry[];
-    /** Positive debit and credit totals, in first-seen quantity order. */
-    balance(t?: SimTime): Map<string, {
-        debits: number;
-        credits: number;
-    }>;
+    get length(): number;
+    private checkCursor;
+    since(cursor?: number): TransferEntry[];
+    /** Credits minus debits in [from, to), using Neumaier compensation. */
+    net(account: string, quantity: string, from?: number, to?: number): number;
     snapshot(): TransferEntry[];
     restore(snapshot: unknown): void;
 }

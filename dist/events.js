@@ -10,6 +10,14 @@ function matchesKind(value, kind, of) {
         default: return typeof value === kind;
     }
 }
+/** Include the event queue and counter in a synchronous transaction. */
+export function eventsParticipant(bus, id = 'events') {
+    return {
+        id,
+        snapshot: () => structuredClone(bus.state()),
+        restore: snapshot => bus.restore(snapshot),
+    };
+}
 function natural(value, what) {
     if (!Number.isSafeInteger(value) || value < 0)
         throw new Error(`${what} must be a non-negative safe integer`);

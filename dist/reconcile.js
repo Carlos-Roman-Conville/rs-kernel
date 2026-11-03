@@ -1,0 +1,176 @@
+import { finite, nonempty } from "./guards.js";
+import { simTime } from "./time.js";
+/** Neumaier compensation preserves small flows across large cancelling entries. */
+class Sum {
+    sum = 0;
+    compensation = 0;
+    add(amount) {
+        const next = this.sum + amount;
+        this.compensation += Math.abs(this.sum) >= Math.abs(amount)
+            ? (this.sum - next) + amount : (amount - next) + this.sum;
+        this.sum = next;
+    }
+    value() { return this.sum + this.compensation; }
+}
+const key = (ledger, account, quantity) => JSON.stringify([ledger, account, quantity]);
+/** Reads owner state and journal records; retains only the previous sync and reports. */
+export class Reconciler {
+    id;
+    journal;
+    ledgers = new Map();
+    unreconciled;
+    registered;
+    boundaries = new Map();
+    tolerance;
+    state = { cursor: 0, reports: [] };
+    constructor(options) {
+        this.id = nonempty(options.id ?? 'kernel.reconcile', 'reconciler id');
+        this.journal = options.journal;
+        this.tolerance = options.tolerance;
+        this.unreconciled = new Set(options.unreconciled ?? []);
+        for (const { ledger, quantities } of options.ledgers) {
+            if (!ledger.holdings)
+                throw new Error(`ledger ${ledger.id} must implement holdings()`);
+            if (this.ledgers.has(ledger.id))
+                throw new Error(`duplicate ledger: ${ledger.id}`);
+            this.ledgers.set(ledger.id, { ledger, quantities: new Set(quantities) });
+        }
+        this.registered = [...new Set([...this.ledgers.keys(), ...this.unreconciled])]
+            .sort((a, b) => b.length - a.length);
+        for (const boundary of options.boundaries ?? []) {
+            this.boundaries.set(key(boundary.ledger, boundary.account, boundary.quantity), boundary.kind);
+        }
+    }
+    holdings() {
+        const result = new Map();
+        for (const [id, { ledger, quantities }] of this.ledgers) {
+            if (this.unreconciled.has(id))
+                continue;
+            result.set(id, new Map([...quantities].map(quantity => [quantity, new Map(ledger.holdings(quantity))])));
+        }
+        return result;
+    }
+    baseline(t) {
+        simTime(t);
+        this.state.baseline = { t, holdings: this.holdings() };
+        this.state.cursor = this.journal.length;
+    }
+    reconcile(t) {
+        simTime(t);
+        if (!this.state.baseline)
+            throw new Error('reconcile requires a baseline');
+        const window = this.journal.since(this.state.cursor);
+        const now = this.holdings();
+        const cells = new Map();
+        const cell = (ledger, account, quantity) => {
+            const id = key(ledger, account, quantity);
+            let value = cells.get(id);
+            if (!value) {
+                value = { ledger, account, quantity, sum: new Sum() };
+                cells.set(id, value);
+            }
+            return value;
+        };
+        for (const entry of window) {
+            for (const [endpoint, sign] of [[entry.from, -1], [entry.to, 1]]) {
+                // Unknown ids cannot be disambiguated; retain the suffix for diagnostics.
+                const id = this.registered.find(id => endpoint.startsWith(`${id}/`)) ?? endpoint.split('/')[0];
+                if (this.unreconciled.has(id))
+                    continue;
+                let account = endpoint.slice(id.length + 1), quantity = entry.quantity, amount = entry.amount;
+                const owner = this.ledgers.get(id);
+                let reason;
+                if (!owner)
+                    reason = 'undeclared ledger';
+                else if (!owner.quantities.has(quantity)) {
+                    if (!owner.ledger.native)
+                        reason = 'view entry without native()';
+                    else {
+                        ({ account, quantity, amount } = owner.ledger.native(account, quantity, amount));
+                        if (!owner.quantities.has(quantity))
+                            reason = 'undeclared native quantity';
+                    }
+                }
+                const value = cell(id, account, quantity);
+                const boundary = this.boundaries.get(key(id, account, quantity));
+                if (!reason && boundary === 'source' && sign > 0)
+                    reason = 'credit to source';
+                if (!reason && boundary === 'sink' && sign < 0)
+                    reason = 'debit from sink';
+                if (!reason && !Number.isFinite(amount))
+                    reason = 'non-finite flow';
+                value.reason ??= reason;
+                value.sum.add(sign * amount);
+            }
+        }
+        for (const holdings of [this.state.baseline.holdings, now]) {
+            for (const [id, quantities] of holdings) {
+                for (const [quantity, accounts] of quantities) {
+                    for (const account of accounts.keys())
+                        cell(id, account, quantity);
+                }
+            }
+        }
+        const rows = [];
+        const totals = [];
+        const sums = new Map();
+        for (const [id, quantities] of now) {
+            for (const quantity of quantities.keys()) {
+                totals.push({ ledger: id, quantity, deltaH: 0, flows: 0 });
+                sums.set(key(id, '', quantity), { deltaH: new Sum(), flows: new Sum() });
+            }
+        }
+        for (const value of cells.values()) {
+            const { ledger, account, quantity } = value;
+            const before = this.state.baseline.holdings.get(ledger)?.get(quantity);
+            const after = now.get(ledger)?.get(quantity);
+            const previous = before?.get(account) ?? 0, current = after?.get(account) ?? 0;
+            const boundary = this.boundaries.has(key(ledger, account, quantity));
+            const flows = value.sum.value();
+            // Boundaries carry flows but have no stock identity to check.
+            const deltaH = boundary ? 0 : current - previous;
+            const residual = boundary ? 0 : deltaH - flows;
+            let reason = value.reason;
+            if (!reason) {
+                if (!Number.isFinite(previous) || !Number.isFinite(current))
+                    reason = 'non-finite holding';
+                else if (!boundary && !before?.has(account) && !after?.has(account))
+                    reason = 'undeclared account';
+            }
+            const tolerance = this.tolerance?.(quantity) ?? 0;
+            finite(tolerance, 'reconcile tolerance', 0);
+            const pass = reason === undefined && Number.isFinite(residual) &&
+                Math.abs(residual) <= tolerance * Math.max(1, Math.abs(current));
+            rows.push({ t, ledger, account, quantity, deltaH, flows, residual, pass,
+                ...(reason === undefined ? {} : { reason }) });
+            const total = sums.get(key(ledger, '', quantity));
+            total?.deltaH.add(deltaH);
+            total?.flows.add(flows);
+        }
+        for (const total of totals) {
+            const sum = sums.get(key(total.ledger, '', total.quantity));
+            total.deltaH = sum.deltaH.value();
+            total.flows = sum.flows.value();
+        }
+        const report = { t, rows, failures: rows.filter(row => !row.pass), unreconciled: [...this.unreconciled], totals };
+        this.state.baseline = { t, holdings: now };
+        this.state.cursor = this.journal.length;
+        return report;
+    }
+    process(options) {
+        return {
+            id: this.id, mechanisms: [this.id], period: options.period, offset: options.offset,
+            phase: 'check', readonly: true,
+            run: ctx => {
+                const report = this.reconcile(ctx.t);
+                this.state.reports.push(structuredClone(report));
+                if (options.throwOnFailure && report.failures.length) {
+                    throw new Error(`reconciliation failed: ${report.failures.slice(0, 10).map(row => `${row.ledger}/${row.account} (${row.quantity}): ${row.reason ?? `residual ${row.residual}`}`).join('; ')}`);
+                }
+            },
+        };
+    }
+    reports() { return structuredClone(this.state.reports); }
+    snapshot() { return structuredClone(this.state); }
+    restore(snapshot) { this.state = structuredClone(snapshot); }
+}

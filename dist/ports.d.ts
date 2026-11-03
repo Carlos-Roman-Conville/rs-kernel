@@ -12,14 +12,17 @@ export declare class PortTable {
     private outputs;
     private inputs;
     private values;
+    private readonly running?;
     /** Input declarations may precede their outputs in this list. */
-    constructor(declarations?: readonly PortDeclaration[]);
+    constructor(declarations?: readonly PortDeclaration[], options?: {
+        running?: () => readonly string[] | null;
+    });
     declareOutput(mechanismId: string, outputId: string, unit: string): void;
     /** Dynamic wiring requires the output to have been declared first. */
     declareInput(mechanismId: string, outputId: string, unit: string): void;
     private output;
     /** Values are expressed in the output's declared unit. */
-    write(outputId: string, value: number): void;
+    write(writer: string, outputId: string, value: number): void;
     /** Omit mechanismId for a raw output read; supply it for a wired input read. */
     read(outputId: string, mechanismId?: string): number | undefined;
 }

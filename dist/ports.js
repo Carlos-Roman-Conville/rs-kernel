@@ -18,8 +18,10 @@ export class PortTable {
     outputs = new Map();
     inputs = new Map();
     values = new Map();
+    running;
     /** Input declarations may precede their outputs in this list. */
-    constructor(declarations = []) {
+    constructor(declarations = [], options) {
+        this.running = options?.running;
         for (const port of declarations) {
             if (port.direction === 'output')
                 this.declareOutput(port.mechanismId, port.outputId, port.unit);
@@ -61,8 +63,13 @@ export class PortTable {
         return output;
     }
     /** Values are expressed in the output's declared unit. */
-    write(outputId, value) {
-        this.output(outputId);
+    write(writer, outputId, value) {
+        const declared = this.output(outputId).mechanismId;
+        if (writer !== declared)
+            throw new Error(`output ${outputId} is written by ${declared}, not ${writer}`);
+        const running = this.running?.();
+        if (running != null && !running.includes(writer))
+            throw new Error(`port write by ${writer} outside its process`);
         this.values.set(outputId, value);
     }
     /** Omit mechanismId for a raw output read; supply it for a wired input read. */

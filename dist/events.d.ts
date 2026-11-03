@@ -1,6 +1,7 @@
 import type { OrderPosition } from './order.ts';
 import type { ScheduledEmission } from './scheduler.ts';
 import { type SimTime } from './time.ts';
+import type { Participant } from './transaction.ts';
 export interface KernelEvent {
     readonly id: string;
     readonly t: SimTime;
@@ -39,6 +40,8 @@ export interface EventBusState {
     readonly counter: number;
     readonly records: readonly EventRecord[];
 }
+/** Include the event queue and counter in a synchronous transaction. */
+export declare function eventsParticipant(bus: EventBus, id?: string): Participant;
 /**
  * Append-only, pull-based delivery. Wire Scheduler's emit option to bus.emit.
  * Publications must follow scheduler order: backdated writes are rejected so cursors

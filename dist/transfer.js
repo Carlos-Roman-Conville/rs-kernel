@@ -9,20 +9,37 @@ export class TransferJournal {
     constructor(id = 'transfers') { this.id = nonempty(id, 'journal id'); }
     append(entry) { this.records.push({ ...entry }); }
     entries() { return this.records.map(entry => ({ ...entry })); }
-    /** Positive debit and credit totals, in first-seen quantity order. */
-    balance(t) {
-        if (t !== undefined)
-            simTime(t);
-        const totals = new Map();
-        for (const entry of this.records) {
-            if (t !== undefined && entry.t !== t)
-                continue;
-            const total = totals.get(entry.quantity) ?? { debits: 0, credits: 0 };
-            total.debits += entry.amount;
-            total.credits += entry.amount;
-            totals.set(entry.quantity, total);
+    get length() { return this.records.length; }
+    checkCursor(cursor) {
+        if (!Number.isInteger(cursor) || cursor < 0 || cursor > this.length) {
+            throw new Error('journal cursor out of range');
         }
-        return totals;
+    }
+    since(cursor = 0) {
+        this.checkCursor(cursor);
+        return this.records.slice(cursor).map(entry => ({ ...entry }));
+    }
+    /** Credits minus debits in [from, to), using Neumaier compensation. */
+    net(account, quantity, from = 0, to = this.length) {
+        this.checkCursor(from);
+        this.checkCursor(to);
+        let sum = 0, compensation = 0;
+        const add = (amount) => {
+            const next = sum + amount;
+            compensation += Math.abs(sum) >= Math.abs(amount)
+                ? (sum - next) + amount : (amount - next) + sum;
+            sum = next;
+        };
+        for (let i = from; i < to; i++) {
+            const entry = this.records[i];
+            if (entry.quantity !== quantity)
+                continue;
+            if (entry.to === account)
+                add(entry.amount);
+            if (entry.from === account)
+                add(-entry.amount);
+        }
+        return sum + compensation;
     }
     snapshot() { return this.entries(); }
     restore(snapshot) {
@@ -37,10 +54,12 @@ export class TransferJournal {
 export function transfer(journal, ...requests) {
     const ledgers = new Set(requests.flatMap(request => [request.from.ledger, request.to.ledger]));
     return transaction([journal, ...ledgers], () => requests.map(request => {
-        const { t, process, quantity, unit, amount, from, to, note } = request;
+        const { t, process, quantity, unit, amount, from, to, note, cause } = request;
         simTime(t);
         nonempty(process, 'transfer process');
         nonempty(quantity, 'transfer quantity');
+        if (cause !== undefined)
+            nonempty(cause, 'transfer cause');
         nonempty(from.account, 'source account');
         nonempty(to.account, 'destination account');
         finite(amount, 'transfer amount');
@@ -64,6 +83,7 @@ export function transfer(journal, ...requests) {
         const entry = {
             t, process, quantity, unit, amount, from: source, to: destination,
             ...(note === undefined ? {} : { note }),
+            ...(cause === undefined ? {} : { cause }),
         };
         journal.append(entry);
         return entry;
