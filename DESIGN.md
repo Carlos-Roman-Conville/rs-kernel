@@ -161,6 +161,15 @@ the adapter asserts each equals `floor(T / DAY)` after its tick (this replaces `
 3. The harness registers `realism.step`, `settlement.tick`, `economy.tick` and runs 30 days (P0 test 1).
 4. The pirate adapter's `runDay` may later call the Kernel instead (pirate lane, its keepers' call; not P0).
 
+### 2.5 Engines with different time steps
+
+1. **Stocks are read as last finished:** a slow process reads what the last finished faster process left at or before `T`.
+2. **Rates are integrated by their producer** over its own `dt`; no consumer re-integrates another engine's rate.
+3. **Flows over a consumer's interval come from the run journal** (`journal.since(cursor)`), never a sum the consumer keeps.
+4. **A decision's effect appears at the next instant:** an intention emitted at `T` resolves in a later phase at `T`;
+   faster processes see the result at their next run. Two-way coupling lags one step in the declared direction.
+5. **Periods need not divide each other** (the heap handles any set); reconciliation needs only instant ends (§3.5).
+
 ## 3. Identifiers (DUP-32)
 
 Proposed scheme, chosen so **no existing id changes**:
@@ -289,9 +298,11 @@ also runs in the browser build) labels snapshots in logs; tests compare the stri
 ### 7.1 Ports: interfaces by registry id (UNIT-15)
 
 `ports.ts`: `declareOutput(mechanismId, outputId, unit)` and `declareInput(...)`; a `PortTable` per entity
-(`write(outputId, value)`, `read(outputId)`) that throws on an undeclared output or a second writer of one output,
-and checks dimensions when an input is wired to an output. The Kernel holds no value semantics; the owner of the
-output is the registry row. Reality rewires neurology's inputs through it in P1 (UNIT-15's fix is Reality's).
+(`write(writer, outputId, value)`, `read(outputId)`) that throws on an undeclared output, a second writer of one
+output, or a `writer` that is not the output's declared mechanism; when run under the scheduler, `write` also throws
+unless `writer` is the running process (`Scheduler.current()`) (RC-12, KRN-53). Dimensions are checked when an
+input is wired to an output. The Kernel holds no value semantics; the owner of the output is the registry row.
+Reality rewires neurology's inputs through it in P1 (UNIT-15's fix is Reality's).
 
 ## 8. The registry check script (P0 test 3)
 
@@ -407,6 +418,11 @@ own cursors and conservation checks.
 | A4 (declarations) | each engine's `kernel.json` | new data file per engine | check script passes on all three |
 | H (harness) | golden compare after adoption (2615); 30-day run; replay and seed tests; the check script in the harness gate | `kernel/harness/` | P0 tests 1–3 |
 | later (owners) | realism snapshot; trace compaction; per-process realism scheduling; realism RNG to streams; pirate `runDay` to the kernel | each owner's lane | owner's tests |
+
+**Harness (`kernel/harness/`).** `load-check.ts` enforces fixture semantics where unknown, zero, and unlimited are
+distinct (misconfiguration stops the run; never treated as interchangeable). `resolver.ts` is the single emitter of
+`shared.action.outcome` under source **`kernel.harness.resolver`**: one terminal outcome per intention, each committed
+step its own transaction, and technical failures settle (M1a-20; PLAN §3.11).
 
 ## 12. The owners' answers (recorded as they arrive)
 
@@ -577,9 +593,17 @@ unit per kernel consumer; the engines' own tags; the snapshot `versions` field.
 `transfer()` in `src/transfer.ts`, that every engine's transfers go through (nutrients, water, mass, energy, money).
 It is bookkeeping: no formula, no knowledge of the quantity, no conversion; the units of the request and of both
 ledgers must be the same unit. Owners implement `TransferLedger` and decide their own refusals (e.g. negative
-balances). Losses are ordinary transfers to a loss account in the same call. `TransferJournal` records each entry
-with the trace's transfer field names, and per quantity per instant debits equal credits (`test/transfer.test.ts`).
-Economy and Settlement ledgers migrate in paired units after kernel v0.1.0; CHAINS CG-19/20/21 adopt it.
+balances). Losses are ordinary transfers to a loss account in the same call. One **run journal** per run records every
+`transfer()` entry with the trace's transfer field names and optional `cause`; callers use `since(cursor)`, `length`,
+and signed per-account `net(account, quantity)` (`test/transfer.test.ts`). Economy and Settlement ledgers migrate in
+paired units after kernel v0.1.0; CHAINS CG-19/20/21 adopt it.
+
+**Reconciler.** At each sync, per account and quantity, holdings change ΔH must match the journal window J within the
+owner's tolerance; the kernel keeps no second ledger (only the previous sync's totals, read from engine state).
+Boundary accounts are declared in each engine's `kernel.json`; view entries are summed through the owner's
+`native(account, quantity, amount)`. A read-only `kernel.reconcile` process runs in the final `check` phase of
+`order.json`. A ledger that still moves amounts between its own accounts without `transfer()` is reported unreconciled
+by name and never passed silently. Full rule: PLAN §3.5.
 
 **Event contracts (CG-18).** The list of event types lives in `Toolchain/registry/events.json`, owned by the
 registry keeper (format: type, producer, consumers, cause, payload fields with kind/quantity/unit/required). The
