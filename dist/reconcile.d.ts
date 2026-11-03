@@ -2,6 +2,18 @@ import type { Process } from './scheduler.ts';
 import { type SimTime } from './time.ts';
 import type { Participant } from './transaction.ts';
 import type { TransferJournal, TransferLedger } from './transfer.ts';
+export interface ToleranceSpec {
+    abs: number;
+    rel: number;
+    scale: 'span' | 'current';
+}
+export type Tolerance = number | ToleranceSpec;
+/**
+ * Checks a residual in the quantity's own unit; undefined means exact.
+ * Numbers retain the legacy current-holdings scale with a floor of one.
+ * Exact integer counts use { abs: 0, rel: 0, scale: 'current' }.
+ */
+export declare function withinTolerance(residual: number, tolerance: Tolerance | undefined, x0: number, x1: number, volume: number): boolean;
 export interface Boundary {
     ledger: string;
     account: string;
@@ -15,6 +27,7 @@ export interface ReconcileRow {
     quantity: string;
     deltaH: number;
     flows: number;
+    volume: number;
     residual: number;
     pass: boolean;
     reason?: string;
@@ -40,7 +53,7 @@ export interface ReconcilerOptions {
     }[];
     unreconciled?: string[];
     boundaries?: Boundary[];
-    tolerance?: (quantity: string) => number | undefined;
+    tolerance?: (quantity: string) => Tolerance | undefined;
 }
 type Holdings = Map<string, Map<string, Map<string, number>>>;
 interface ReconcileState {

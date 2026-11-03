@@ -8,7 +8,7 @@ export { Runner, type Reducer } from './runner.ts';
 export { transaction, type Participant } from './transaction.ts';
 export { ReservationLedger, type Bound, type Reservation, type ReservationRequest, type ReservationRecord, type ReservationLedgerOptions, type ReservationSnapshot } from './reservations.ts';
 export { transfer, TransferJournal, type TransferLedger, type TransferEndpoint, type TransferRequest, type TransferEntry } from './transfer.ts';
-export { Reconciler, type Boundary, type ReconcileRow, type ReconcileReport, type ReconcilerOptions } from './reconcile.ts';
+export { Reconciler, withinTolerance, type Tolerance, type ToleranceSpec, type Boundary, type ReconcileRow, type ReconcileReport, type ReconcilerOptions } from './reconcile.ts';
 export { canonical, comparable, fnv1a64, take, restore, checkKernelBlock, type Snapshot } from './snapshot.ts';
 export { MS, SECOND, MINUTE, HOUR, DAY, TROPICAL_YEAR, simTime, type SimTime } from './time.ts';
 export { Order, defaultOrder, type ProcessOrder, type OrderPosition } from './order.ts';

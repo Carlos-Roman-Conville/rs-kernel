@@ -1,5 +1,27 @@
 import { finite, nonempty } from "./guards.js";
 import { simTime } from "./time.js";
+/**
+ * Checks a residual in the quantity's own unit; undefined means exact.
+ * Numbers retain the legacy current-holdings scale with a floor of one.
+ * Exact integer counts use { abs: 0, rel: 0, scale: 'current' }.
+ */
+export function withinTolerance(residual, tolerance, x0, x1, volume) {
+    if (!Number.isFinite(residual))
+        return false;
+    if (tolerance === undefined)
+        return Math.abs(residual) <= 0;
+    if (typeof tolerance === 'number') {
+        finite(tolerance, 'reconcile tolerance', 0);
+        return Math.abs(residual) <= tolerance * Math.max(1, Math.abs(x1));
+    }
+    finite(tolerance.abs, 'reconcile absolute tolerance', 0);
+    finite(tolerance.rel, 'reconcile relative tolerance', 0);
+    if (tolerance.scale !== 'span' && tolerance.scale !== 'current')
+        throw new Error('invalid reconcile tolerance scale');
+    finite(volume, 'reconcile volume', 0);
+    const scale = tolerance.scale === 'span' ? Math.max(Math.abs(x0), Math.abs(x1), volume) : Math.abs(x1);
+    return Math.abs(residual) <= tolerance.abs + tolerance.rel * scale;
+}
 /** Neumaier compensation preserves small flows across large cancelling entries. */
 class Sum {
     sum = 0;
@@ -66,7 +88,7 @@ export class Reconciler {
             const id = key(ledger, account, quantity);
             let value = cells.get(id);
             if (!value) {
-                value = { ledger, account, quantity, sum: new Sum() };
+                value = { ledger, account, quantity, sum: new Sum(), volume: new Sum() };
                 cells.set(id, value);
             }
             return value;
@@ -101,6 +123,7 @@ export class Reconciler {
                     reason = 'non-finite flow';
                 value.reason ??= reason;
                 value.sum.add(sign * amount);
+                value.volume.add(Math.abs(amount));
             }
         }
         for (const holdings of [this.state.baseline.holdings, now]) {
@@ -127,6 +150,7 @@ export class Reconciler {
             const previous = before?.get(account) ?? 0, current = after?.get(account) ?? 0;
             const boundary = this.boundaries.has(key(ledger, account, quantity));
             const flows = value.sum.value();
+            const volume = value.volume.value();
             // Boundaries carry flows but have no stock identity to check.
             const deltaH = boundary ? 0 : current - previous;
             const residual = boundary ? 0 : deltaH - flows;
@@ -137,11 +161,8 @@ export class Reconciler {
                 else if (!boundary && !before?.has(account) && !after?.has(account))
                     reason = 'undeclared account';
             }
-            const tolerance = this.tolerance?.(quantity) ?? 0;
-            finite(tolerance, 'reconcile tolerance', 0);
-            const pass = reason === undefined && Number.isFinite(residual) &&
-                Math.abs(residual) <= tolerance * Math.max(1, Math.abs(current));
-            rows.push({ t, ledger, account, quantity, deltaH, flows, residual, pass,
+            const pass = reason === undefined && withinTolerance(residual, this.tolerance?.(quantity), previous, current, volume);
+            rows.push({ t, ledger, account, quantity, deltaH, flows, volume, residual, pass,
                 ...(reason === undefined ? {} : { reason }) });
             const total = sums.get(key(ledger, '', quantity));
             total?.deltaH.add(deltaH);

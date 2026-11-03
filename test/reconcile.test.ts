@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  canonical, Reconciler, transfer, TransferJournal,
-  type Boundary, type ProcessContext, type TransferLedger, type TransferRequest,
+  canonical, Reconciler, transfer, TransferJournal, withinTolerance,
+  type Boundary, type ProcessContext, type TransferLedger, type TransferRequest, type ToleranceSpec,
 } from '../src/index.ts'
 
 // Test doubles only: in-memory holdings and arbitrary fixture amounts/units.
@@ -47,7 +47,80 @@ function setup(boundaries: Boundary[] = []) {
 const context = (t: number): ProcessContext => ({ t, dt: 1,
   rng: () => { throw new Error('unexpected RNG') }, emit: () => { throw new Error('unexpected emission') } })
 
+describe('withinTolerance', () => {
+  // Adjacent representable floats, so boundary checks cannot hide a rounding gap.
+  const adjacent = (value: number, step: bigint) => {
+    const buffer = new ArrayBuffer(8), view = new DataView(buffer)
+    view.setFloat64(0, value)
+    view.setBigUint64(0, view.getBigUint64(0) + step)
+    return view.getFloat64(0)
+  }
+
+  it.each([0.5, -0.5, 8, -8])('preserves numeric tolerance at current holdings %s', current => {
+    const limit = 0.1 * Math.max(1, Math.abs(current))
+    for (const sign of [-1, 1]) {
+      expect(withinTolerance(sign * adjacent(limit, -1n), 0.1, 100, current, 100)).toBe(true)
+      expect(withinTolerance(sign * limit, 0.1, 100, current, 100)).toBe(true)
+      expect(withinTolerance(sign * adjacent(limit, 1n), 0.1, 100, current, 100)).toBe(false)
+    }
+  })
+
+  it('uses current holdings without a floor', () => {
+    const tolerance: ToleranceSpec = { abs: 0, rel: 0.1, scale: 'current' }
+    expect(withinTolerance(0.05, tolerance, 100, 0.5, 100)).toBe(true)
+    expect(withinTolerance(adjacent(0.05, 1n), tolerance, 100, 0.5, 100)).toBe(false)
+  })
+
+  it.each([[-8, 2, 3], [2, -8, 3], [2, 3, 8]])('uses span max for %s, %s, %s', (x0, x1, volume) => {
+    const tolerance: ToleranceSpec = { abs: 0.5, rel: 0.25, scale: 'span' }
+    expect(withinTolerance(2.5, tolerance, x0, x1, volume)).toBe(true)
+    expect(withinTolerance(adjacent(2.5, 1n), tolerance, x0, x1, volume)).toBe(false)
+  })
+
+  it.each([undefined, { abs: 0, rel: 0, scale: 'current' } as const])('keeps exact tolerance %s', tolerance => {
+    for (const residual of [0, -0]) expect(withinTolerance(residual, tolerance, 10, 10, 20)).toBe(true)
+    for (const residual of [Number.MIN_VALUE, -Number.MIN_VALUE, NaN, Infinity, -Infinity]) {
+      expect(withinTolerance(residual, tolerance, 10, 10, 20)).toBe(false)
+    }
+  })
+
+  it.each([-1, NaN, Infinity, -Infinity])('rejects invalid tolerance components and volume: %s', value => {
+    expect(() => withinTolerance(0, value, 0, 0, 0)).toThrow()
+    for (const field of ['abs', 'rel'] as const) {
+      expect(() => withinTolerance(0, { abs: 0, rel: 0, scale: 'current', [field]: value }, 0, 0, 0)).toThrow()
+    }
+    for (const scale of ['current', 'span'] as const) {
+      expect(() => withinTolerance(0, { abs: 0, rel: 0, scale }, 0, 0, value)).toThrow()
+    }
+  })
+
+  it('rejects unknown scales and non-finite residuals', () => {
+    expect(() => withinTolerance(0, { abs: 0, rel: 0, scale: 'unknown' } as unknown as ToleranceSpec, 0, 0, 0)).toThrow()
+    for (const residual of [NaN, Infinity, -Infinity]) {
+      expect(withinTolerance(residual, 1, 0, 1, 0)).toBe(false)
+      expect(withinTolerance(residual, { abs: 1, rel: 1, scale: 'span' }, 0, 1, 0)).toBe(false)
+    }
+  })
+})
+
 describe('per-account reconciliation', () => {
+  it('counts cancelling legs in native units and resets window volume', () => {
+    const ledger = new ViewLedger('a'), journal = new TransferJournal()
+    const reconciler = new Reconciler({ journal, ledgers: [{ ledger, quantities: ['count'] }],
+      boundaries: [{ ledger: 'a', account: 'outside', quantity: 'count', kind: 'transform' }],
+      tolerance: () => ({ abs: 0, rel: 0.1, scale: 'span' }) })
+    reconciler.baseline(0)
+    const request: TransferRequest = { t: 1, process: 'move', quantity: 'mass', unit: 'kg', amount: 2,
+      from: { ledger, account: 'mass-view' }, to: { ledger, account: 'outside' } }
+    transfer(journal, request, { ...request, from: request.to, to: request.from })
+    const report = reconciler.reconcile(1)
+    expect(report.failures).toEqual([])
+    for (const account of ['stock', 'outside']) {
+      expect(report.rows.find(row => row.account === account)).toMatchObject({ quantity: 'count', volume: 2, flows: 0 })
+    }
+    expect(reconciler.reconcile(2).rows.every(row => row.volume === 0)).toBe(true)
+  })
+
   it('reconciles clean transfers, reads without mutations, and advances its window', () => {
     const { a, b, journal, reconciler, request } = setup()
     transfer(journal, request, { ...request, amount: 0.5, from: request.to, to: request.from })
