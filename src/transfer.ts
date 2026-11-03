@@ -7,6 +7,10 @@ import { parse, sameDimension } from './units.ts'
 export interface TransferLedger extends Participant {
   unit(account: string, quantity: string): string
   apply(account: string, quantity: string, delta: number): void
+  /** Complete current holdings by unqualified account, in the owner's unit. */
+  holdings?(quantity: string): ReadonlyMap<string, number>
+  /** Only the owner maps a view entry to the stock's native account and unit. */
+  native?(account: string, quantity: string, amount: number): { account: string; quantity: string; amount: number }
 }
 
 export interface TransferEndpoint {
