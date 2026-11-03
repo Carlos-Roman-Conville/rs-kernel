@@ -9,6 +9,25 @@ const process = (id: string, period: number, run: Process['run'] = () => {}): Pr
   ({ id, mechanisms: [], period, phase: 'fast', run })
 
 describe('simulation scheduler', () => {
+  it('current identifies each running process and is null between runs', () => {
+    const clock = new Scheduler({ order: insertion })
+    const seen: string[] = []
+    expect(clock.current()).toBeNull()
+    for (const id of ['first', 'second']) {
+      const mechanisms = [`${id}.mechanism`]
+      clock.register({ ...process(id, 1, () => {
+        expect(clock.current()).toEqual({ id, mechanisms: [`${id}.mechanism`] })
+        seen.push(id)
+      }), mechanisms })
+      mechanisms.push('added.after.registration')
+    }
+    for (const target of [0, 1, 2]) {
+      clock.runUntil(target)
+      expect(clock.current()).toBeNull()
+    }
+    expect(seen).toEqual(['first', 'second', 'first', 'second'])
+  })
+
   it('P-readonly: record observers run last without creating streams or changing normal draws and emissions', () => {
     const run = (attached: boolean) => {
       const random = streams(42)
@@ -241,8 +260,12 @@ describe('simulation scheduler', () => {
 
   it('P-failure: callback failure propagates and cannot silently replay partially completed work', () => {
     const clock = new Scheduler({ order: insertion })
-    clock.register(process('p', 1, () => { throw new Error('host failure') }))
+    clock.register(process('p', 1, () => {
+      expect(clock.current()).toEqual({ id: 'p', mechanisms: [] })
+      throw new Error('host failure')
+    }))
     expect(() => clock.runUntil(2)).toThrow('host failure')
+    expect(clock.current()).toBeNull()
     expect(clock.t).toBe(1)
     expect(() => clock.runUntil(2)).toThrow('after failure')
     expect(() => clock.register(process('other', 1))).toThrow('after failure')

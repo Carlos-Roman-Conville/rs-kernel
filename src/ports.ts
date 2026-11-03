@@ -29,9 +29,11 @@ export class PortTable {
   private outputs = new Map<string, PortDeclaration>()
   private inputs = new Map<string, Map<string, PortDeclaration>>()
   private values = new Map<string, number>()
+  private readonly running?: () => readonly string[] | null
 
   /** Input declarations may precede their outputs in this list. */
-  constructor(declarations: readonly PortDeclaration[] = []) {
+  constructor(declarations: readonly PortDeclaration[] = [], options?: { running?: () => readonly string[] | null }) {
+    this.running = options?.running
     for (const port of declarations) {
       if (port.direction === 'output') this.declareOutput(port.mechanismId, port.outputId, port.unit)
     }
@@ -70,8 +72,11 @@ export class PortTable {
   }
 
   /** Values are expressed in the output's declared unit. */
-  write(outputId: string, value: number): void {
-    this.output(outputId)
+  write(writer: string, outputId: string, value: number): void {
+    const declared = this.output(outputId).mechanismId
+    if (writer !== declared) throw new Error(`output ${outputId} is written by ${declared}, not ${writer}`)
+    const running = this.running?.()
+    if (running != null && !running.includes(writer)) throw new Error(`port write by ${writer} outside its process`)
     this.values.set(outputId, value)
   }
 

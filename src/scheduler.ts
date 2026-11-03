@@ -41,6 +41,8 @@ export interface SchedulerOptions {
 }
 
 interface Entry extends OrderPosition {
+  id: string
+  mechanisms: readonly string[]
   last: SimTime
   run: Process['run']
   rng: ProcessContext['rng']
@@ -106,6 +108,7 @@ export class Scheduler {
   private readonly ids = new Set<string>()
   private readonly buckets = new Map<SimTime, Bucket>()
   private running = false
+  private active: Entry | null = null
   private failed = false
 
   constructor(options: SchedulerOptions = {}) {
@@ -116,6 +119,10 @@ export class Scheduler {
   }
 
   get t(): SimTime { return this.time }
+
+  current(): { id: string; mechanisms: readonly string[] } | null {
+    return this.active ? { id: this.active.id, mechanisms: this.active.mechanisms } : null
+  }
 
   /**
    * First run is strictly after registration and at/after offset (default epoch 0).
@@ -135,7 +142,7 @@ export class Scheduler {
     const next = offset > this.time ? offset : after(this.time, period - (this.time - offset) % period)
     const readonly = process.readonly === true
     const entry: Entry = {
-      ...rank, last: this.time, run: process.run.bind(process),
+      ...rank, id, mechanisms: Object.freeze([...mechanisms]), last: this.time, run: process.run.bind(process),
       rng: mechanismId => {
         if (readonly) throw new Error(`read-only process ${id} may not use rng`)
         if (!mechanisms.has(mechanismId)) throw new Error(`undeclared mechanism: ${mechanismId}`)
@@ -193,7 +200,12 @@ export class Scheduler {
           }
         }
         for (const entry of due!) {
-          entry.run({ t: next, dt: next - entry.last, rng: entry.rng, emit: entry.emit })
+          this.active = entry
+          try {
+            entry.run({ t: next, dt: next - entry.last, rng: entry.rng, emit: entry.emit })
+          } finally {
+            this.active = null
+          }
           entry.last = next
         }
       }
