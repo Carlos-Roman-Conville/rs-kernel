@@ -9,7 +9,7 @@ export { Runner } from "./runner.js";
 export { transaction } from "./transaction.js";
 export { transfer, TransferJournal } from "./transfer.js";
 export { Reconciler } from "./reconcile.js";
-export { canonical, fnv1a64, take, restore, checkKernelBlock } from "./snapshot.js";
+export { canonical, comparable, fnv1a64, take, restore, checkKernelBlock } from "./snapshot.js";
 export { MS, SECOND, MINUTE, HOUR, DAY, TROPICAL_YEAR, simTime } from "./time.js";
 export { Order, defaultOrder } from "./order.js";
 export { Scheduler } from "./scheduler.js";

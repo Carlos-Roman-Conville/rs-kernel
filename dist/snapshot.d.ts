@@ -4,6 +4,7 @@ import type { Participant } from './transaction.ts';
 export interface Snapshot {
     kernel: {
         version: number;
+        versions?: Record<string, string>;
         t: SimTime;
         epoch: number | null;
         epochLabel?: string;
@@ -18,6 +19,11 @@ export interface Snapshot {
 export declare function checkKernelBlock(block: unknown): void;
 /** Plain JSON comparison only: undefined properties/elements are dropped, not reordered. */
 export declare function canonical(value: unknown): string;
+/** Compare host-recorded code versions before comparing run outputs. */
+export declare function comparable(a: Snapshot, b: Snapshot): {
+    ok: boolean;
+    differences: string[];
+};
 /** FNV-1a over UTF-8 bytes, as a zero-padded lowercase 64-bit hex label. */
 export declare function fnv1a64(value: string): string;
 /** Capture detached parts without canonicalizing: engine insertion order must survive. */

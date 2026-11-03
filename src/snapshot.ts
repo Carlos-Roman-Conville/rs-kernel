@@ -5,6 +5,7 @@ import type { Participant } from './transaction.ts'
 export interface Snapshot {
   kernel: {
     version: number
+    versions?: Record<string, string>
     t: SimTime
     epoch: number | null
     epochLabel?: string
@@ -23,6 +24,14 @@ export function checkKernelBlock(block: unknown): void {
   }
   const value = block as Record<string, unknown>
   if (value.version !== 2) throw new Error('snapshot kernel version must be 2')
+  if ('versions' in value) {
+    const versions = value.versions
+    if (versions === null || typeof versions !== 'object' || Array.isArray(versions) ||
+        (Object.getPrototypeOf(versions) !== Object.prototype && Object.getPrototypeOf(versions) !== null) ||
+        Object.values(versions).some(version => typeof version !== 'string' || version.length === 0)) {
+      throw new Error('snapshot kernel versions must be an object of nonempty strings')
+    }
+  }
   if (value.epoch !== null && (typeof value.epoch !== 'number' || !Number.isFinite(value.epoch))) {
     throw new Error('snapshot kernel epoch must be null or a finite number')
   }
@@ -65,6 +74,17 @@ export function canonical(value: unknown): string {
   }
   // A root undefined has no JSON representation and is rejected like other non-JSON values.
   return write(value)
+}
+
+/** Compare host-recorded code versions before comparing run outputs. */
+export function comparable(a: Snapshot, b: Snapshot): { ok: boolean; differences: string[] } {
+  const left = a.kernel.versions, right = b.kernel.versions
+  if (left === undefined || right === undefined) {
+    return { ok: false, differences: ['versions not recorded'] }
+  }
+  const differences = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort()
+    .filter(key => !Object.hasOwn(left, key) || !Object.hasOwn(right, key) || left[key] !== right[key])
+  return { ok: canonical(left) === canonical(right), differences }
 }
 
 /** FNV-1a over UTF-8 bytes, as a zero-padded lowercase 64-bit hex label. */

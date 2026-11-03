@@ -1,7 +1,7 @@
 // @ts-expect-error The repo omits Node typings; node:crypto is provided by the test runtime.
 import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
-import { canonical, fnv1a64, take, restore, checkKernelBlock, simTime, type Participant, type Snapshot } from '../src/index.ts'
+import { canonical, comparable, fnv1a64, take, restore, checkKernelBlock, simTime, type Participant, type Snapshot } from '../src/index.ts'
 
 const kernel = (): Snapshot['kernel'] => ({
   version: 2, t: simTime(1000), epoch: 1690.0, epochLabel: '1690-01-01', catalogue_hash: null,
@@ -65,6 +65,52 @@ function engine(id: string, initial: unknown) {
   }
   return { participant, state: () => state }
 }
+
+describe('snapshot code versions', () => {
+  it('round-trips detached versions through take and restore', () => {
+    const versions = { kernel: 'abc123', economy: '1.2.3' }
+    const snapshot = take([], { ...kernel(), versions })
+    versions.kernel = 'changed'
+    const restored = restore([], snapshot)
+    expect(restored.versions).toEqual({ kernel: 'abc123', economy: '1.2.3' })
+    restored.versions!.kernel = 'changed again'
+    expect(snapshot.kernel.versions!.kernel).toBe('abc123')
+    expect(snapshot.kernel.version).toBe(2)
+  })
+
+  it.each([undefined, null, [], 'abc', 42, { kernel: '' }, { kernel: 42 }, new Date()])(
+    'rejects malformed versions %s', versions => {
+      const block = { ...kernel(), versions } as Snapshot['kernel']
+      expect(() => checkKernelBlock(block)).toThrow('versions')
+      expect(() => restore([], { kernel: block, engines: {} })).toThrow('versions')
+    },
+  )
+
+  it('compares equal versions regardless of key order, including empty records', () => {
+    const a = take([], { ...kernel(), versions: { kernel: 'abc', economy: '1' } })
+    const b = take([], { ...kernel(), versions: { economy: '1', kernel: 'abc' } })
+    expect(comparable(a, b)).toEqual({ ok: true, differences: [] })
+    const empty = take([], { ...kernel(), versions: {} })
+    expect(comparable(empty, empty)).toEqual({ ok: true, differences: [] })
+  })
+
+  it('names every changed or missing key in either direction', () => {
+    const a = take([], { ...kernel(), versions: { kernel: 'abc', economy: '1', stable: '1' } })
+    const b = take([], { ...kernel(), versions: { kernel: 'def', reality: '2', stable: '1' } })
+    const expected = { ok: false, differences: ['economy', 'kernel', 'reality'] }
+    expect(comparable(a, b)).toEqual(expected)
+    expect(comparable(b, a)).toEqual(expected)
+  })
+
+  it('refuses comparison when either snapshot has no versions', () => {
+    const legacy = take([], kernel())
+    const recorded = take([], { ...kernel(), versions: { kernel: 'abc' } })
+    const expected = { ok: false, differences: ['versions not recorded'] }
+    expect(comparable(legacy, recorded)).toEqual(expected)
+    expect(comparable(recorded, legacy)).toEqual(expected)
+    expect(comparable(legacy, legacy)).toEqual(expected)
+  })
+})
 
 describe('snapshot canonical comparison rules', () => {
   it('canonical sorts keys at every depth, including numeric keys lexically', () => {
