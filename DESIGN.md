@@ -605,6 +605,15 @@ Boundary accounts are declared in each engine's `kernel.json`; view entries are 
 `order.json`. A ledger that still moves amounts between its own accounts without `transfer()` is reported unreconciled
 by name and never passed silently. Full rule: PLAN §3.5.
 
+**Tolerance contract (Kernel and History keepers, 2026-11-03; KRN-54).** An owner declares, per quantity, either a
+number `tol` (pass when |r| ≤ tol · max(1, |X(t1)|), the original rule, unchanged) or `{ abs, rel, scale }` (pass when
+|r| ≤ abs + rel · S, all in the quantity's unit), with `scale: 'span'` → S = max(|X(t0)|, |X(t1)|, Σ|Δ|), Σ|Δ| summed
+one absolute value per journal leg (a −1/+1 pair adds 2), or `scale: 'current'` → S = |X(t1)| with no floor. Exact
+counts are `{ abs: 0, rel: 0, scale: 'current' }`. Nothing declared means exact. `withinTolerance(residual, tolerance,
+X0, X1, volume)` is exported from `@rex/kernel`; the reconciler applies it per sync window and History (PLAN §3.7
+check 2) applies the same function and the same declared object over its reporting interval, so the two checks
+cannot disagree on the rule. The kernel chooses no tolerance or scale; owners declare them in their PLAN §7.
+
 **Event contracts (CG-18).** The list of event types lives in `Toolchain/registry/events.json`, owned by the
 registry keeper (format: type, producer, consumers, cause, payload fields with kind/quantity/unit/required). The
 Kernel supplies `checkEventContracts` in `scripts/check-registry.ts` and an opt-in `EventBus` contracts hook; both
