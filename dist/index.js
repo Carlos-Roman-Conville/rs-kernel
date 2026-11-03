@@ -7,6 +7,7 @@ export { must, nonempty, finite, integer } from "./guards.js";
 export { rng, fnv1a32, mix32, streams } from "./rng.js";
 export { Runner } from "./runner.js";
 export { transaction } from "./transaction.js";
+export { ReservationLedger } from "./reservations.js";
 export { transfer, TransferJournal } from "./transfer.js";
 export { Reconciler } from "./reconcile.js";
 export { canonical, comparable, fnv1a64, take, restore, checkKernelBlock } from "./snapshot.js";
