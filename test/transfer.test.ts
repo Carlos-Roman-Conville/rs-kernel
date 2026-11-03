@@ -52,16 +52,16 @@ describe('transfer bookkeeping', () => {
       { ...request, t: 1, amount: 4, quantity: 'substance', unit: 'mol' },
       { ...request, t: 2, amount: 0.25 },
     )
-    for (const t of [0, 1, 2]) {
-      for (const [quantity, totals] of journal.balance(t)) {
-        const expected = journal.entries().filter(e => e.t === t && e.quantity === quantity)
-          .reduce((sum, e) => sum + e.amount, 0)
-        expect(totals).toEqual({ debits: expected, credits: expected })
-      }
+    for (const [i, entry] of journal.entries().entries()) {
+      expect(journal.net(entry.from, entry.quantity, i, i + 1)).toBe(-entry.amount)
+      expect(journal.net(entry.to, entry.quantity, i, i + 1)).toBe(entry.amount)
     }
-    expect(journal.balance().get('mass')).toEqual({ debits: 2, credits: 2 })
-    expect(journal.balance().get('substance')).toEqual({ debits: 6, credits: 6 })
-    expect(journal.balance(3).size).toBe(0)
+    expect(journal.net('a/stock', 'mass')).toBe(0.5)
+    expect(journal.net('b/stock', 'mass')).toBe(-0.5)
+    expect(journal.net('a/stock', 'substance')).toBe(-6)
+    expect(journal.net('b/stock', 'substance')).toBe(6)
+    expect(journal.net('a/stock', 'unknown')).toBe(0)
+    expect(journal.net('unknown/stock', 'mass')).toBe(0)
     for (const [i, ledger] of [a, b].entries()) {
       for (const [key, value] of ledger.balances) {
         const [account, quantity] = key.split('/')
@@ -69,8 +69,53 @@ describe('transfer bookkeeping', () => {
         const delta = journal.entries().filter(e => e.quantity === quantity).reduce((sum, e) =>
           sum + (e.to === endpoint ? e.amount : 0) - (e.from === endpoint ? e.amount : 0), 0)
         expect(value - before[i].get(key)!).toBe(delta)
+        expect(journal.net(endpoint, quantity)).toBe(delta)
       }
     }
+  })
+
+  it('records explicit causes and omits absent causes', () => {
+    const { journal, request } = setup()
+    const entries = transfer(journal, request, { ...request, cause: 'intention.1' })
+    expect(entries[0]).not.toHaveProperty('cause')
+    expect(entries[1].cause).toBe('intention.1')
+    expect(journal.entries()).toEqual(entries)
+  })
+
+  it('reads detached suffixes and partitions entries at a middle cursor', () => {
+    const { journal, request } = setup()
+    expect(journal.length).toBe(0)
+    expect(journal.since()).toEqual([])
+    transfer(journal, request, { ...request, amount: 1 }, { ...request, amount: 2 })
+    const all = journal.entries()
+    expect(journal.length).toBe(3)
+    expect(journal.since()).toEqual(all)
+    expect(journal.since(0)).toEqual(all)
+    expect(journal.since(journal.length)).toEqual([])
+    expect([...all.slice(0, 1), ...journal.since(1)]).toEqual(all)
+    const suffix = journal.since(1)
+    suffix[0].amount = 999
+    suffix.pop()
+    expect(journal.entries()).toEqual(all)
+    expect(journal.net('b/stock', 'mass', 1, 3)).toBe(3)
+    expect(journal.net('b/stock', 'mass', 3, 3)).toBe(0)
+    for (const cursor of [-1, 4, 0.5, NaN, Infinity]) {
+      expect(() => journal.since(cursor)).toThrow('journal cursor out of range')
+      expect(() => journal.net('b/stock', 'mass', cursor)).toThrow('journal cursor out of range')
+      expect(() => journal.net('b/stock', 'mass', 0, cursor)).toThrow('journal cursor out of range')
+    }
+  })
+
+  it('preserves small credits when large credits and debits cancel', () => {
+    const { journal } = setup()
+    for (const amount of [1e16, 1, 1, -1e16]) {
+      journal.append({
+        t: 0, process: 'move', quantity: 'mass', unit: 'kg', amount: Math.abs(amount),
+        from: amount > 0 ? 'a/stock' : 'b/stock', to: amount > 0 ? 'b/stock' : 'a/stock',
+      })
+    }
+    expect(journal.net('b/stock', 'mass')).toBe(2)
+    expect(journal.net('a/stock', 'mass')).toBe(-2)
   })
 
   it('applies exactly minus q and plus q, recording a loss as a separate request', () => {
@@ -134,6 +179,7 @@ describe('transfer bookkeeping', () => {
   it.each<Partial<TransferRequest>>([
     { amount: 0 }, { amount: -1 }, { amount: NaN }, { amount: Infinity },
     { process: '' }, { process: ' ' }, { quantity: '' }, { t: -1 }, { t: 0.5 }, { t: NaN },
+    { cause: '' }, { cause: ' ' },
   ])('rejects invalid request %j and rolls back earlier requests', invalid => {
     const { a, b, journal, request } = setup()
     const before = [a.snapshot(), b.snapshot(), journal.snapshot()]

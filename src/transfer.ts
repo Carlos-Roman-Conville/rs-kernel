@@ -23,6 +23,7 @@ export interface TransferRequest {
   readonly from: TransferEndpoint
   readonly to: TransferEndpoint
   readonly note?: string
+  readonly cause?: string
 }
 
 export interface TransferEntry {
@@ -34,6 +35,7 @@ export interface TransferEntry {
   from: string
   to: string
   note?: string
+  cause?: string
 }
 
 /** Append-only bookkeeping; snapshots and reads never share entry objects. */
@@ -47,18 +49,37 @@ export class TransferJournal implements Participant {
 
   entries(): TransferEntry[] { return this.records.map(entry => ({ ...entry })) }
 
-  /** Positive debit and credit totals, in first-seen quantity order. */
-  balance(t?: SimTime): Map<string, { debits: number; credits: number }> {
-    if (t !== undefined) simTime(t)
-    const totals = new Map<string, { debits: number; credits: number }>()
-    for (const entry of this.records) {
-      if (t !== undefined && entry.t !== t) continue
-      const total = totals.get(entry.quantity) ?? { debits: 0, credits: 0 }
-      total.debits += entry.amount
-      total.credits += entry.amount
-      totals.set(entry.quantity, total)
+  get length(): number { return this.records.length }
+
+  private checkCursor(cursor: number): void {
+    if (!Number.isInteger(cursor) || cursor < 0 || cursor > this.length) {
+      throw new Error('journal cursor out of range')
     }
-    return totals
+  }
+
+  since(cursor = 0): TransferEntry[] {
+    this.checkCursor(cursor)
+    return this.records.slice(cursor).map(entry => ({ ...entry }))
+  }
+
+  /** Credits minus debits in [from, to), using Neumaier compensation. */
+  net(account: string, quantity: string, from = 0, to = this.length): number {
+    this.checkCursor(from)
+    this.checkCursor(to)
+    let sum = 0, compensation = 0
+    const add = (amount: number) => {
+      const next = sum + amount
+      compensation += Math.abs(sum) >= Math.abs(amount)
+        ? (sum - next) + amount : (amount - next) + sum
+      sum = next
+    }
+    for (let i = from; i < to; i++) {
+      const entry = this.records[i]
+      if (entry.quantity !== quantity) continue
+      if (entry.to === account) add(entry.amount)
+      if (entry.from === account) add(-entry.amount)
+    }
+    return sum + compensation
   }
 
   snapshot(): TransferEntry[] { return this.entries() }
@@ -76,10 +97,11 @@ export class TransferJournal implements Participant {
 export function transfer(journal: TransferJournal, ...requests: TransferRequest[]): TransferEntry[] {
   const ledgers = new Set(requests.flatMap(request => [request.from.ledger, request.to.ledger]))
   return transaction([journal, ...ledgers], () => requests.map(request => {
-    const { t, process, quantity, unit, amount, from, to, note } = request
+    const { t, process, quantity, unit, amount, from, to, note, cause } = request
     simTime(t)
     nonempty(process, 'transfer process')
     nonempty(quantity, 'transfer quantity')
+    if (cause !== undefined) nonempty(cause, 'transfer cause')
     nonempty(from.account, 'source account')
     nonempty(to.account, 'destination account')
     finite(amount, 'transfer amount')
@@ -101,6 +123,7 @@ export function transfer(journal: TransferJournal, ...requests: TransferRequest[
     const entry: TransferEntry = {
       t, process, quantity, unit, amount, from: source, to: destination,
       ...(note === undefined ? {} : { note }),
+      ...(cause === undefined ? {} : { cause }),
     }
     journal.append(entry)
     return entry

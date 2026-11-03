@@ -2,6 +2,7 @@ import { nonempty } from './guards.ts'
 import type { OrderPosition } from './order.ts'
 import type { ScheduledEmission } from './scheduler.ts'
 import { simTime, type SimTime } from './time.ts'
+import type { Participant } from './transaction.ts'
 
 export interface KernelEvent {
   readonly id: string
@@ -55,6 +56,15 @@ export interface EventRecord extends OrderPosition {
 export interface EventBusState {
   readonly counter: number
   readonly records: readonly EventRecord[]
+}
+
+/** Include the event queue and counter in a synchronous transaction. */
+export function eventsParticipant(bus: EventBus, id = 'events'): Participant {
+  return {
+    id,
+    snapshot: () => structuredClone(bus.state()),
+    restore: snapshot => bus.restore(snapshot as EventBusState),
+  }
 }
 
 function natural(value: number, what: string): void {

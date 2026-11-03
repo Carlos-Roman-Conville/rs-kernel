@@ -12,6 +12,6 @@ export { canonical, fnv1a64, take, restore, checkKernelBlock, type Snapshot } fr
 export { MS, SECOND, MINUTE, HOUR, DAY, TROPICAL_YEAR, simTime, type SimTime } from './time.ts'
 export { Order, defaultOrder, type ProcessOrder, type OrderPosition } from './order.ts'
 export { Scheduler, type Process, type ProcessContext, type SchedulerOptions, type ScheduledEmission } from './scheduler.ts'
-export { EventBus, type KernelEvent, type EventReader, type EventCursor, type EventRecord, type EventBusState, type EventContract, type PayloadField } from './events.ts'
+export { EventBus, eventsParticipant, type KernelEvent, type EventReader, type EventCursor, type EventRecord, type EventBusState, type EventContract, type PayloadField } from './events.ts'
 export { ResolutionService, switchTo, type Resolution, type ConservedQuantity, type ResolutionMode, type ResolutionState, type ResolutionOptions } from './resolution.ts'
 export { Trace, type TraceRecord, type Transfer, type Check, type CheckSummary, type NoteSummary } from './trace.ts'

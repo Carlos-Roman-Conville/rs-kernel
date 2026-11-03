@@ -1,11 +1,40 @@
 import { describe, expect, it, vi } from 'vitest'
-import { EventBus, Scheduler, type ScheduledEmission, type EventContract, type PayloadField } from '../src/index.ts'
+import { canonical, EventBus, eventsParticipant, transaction, Scheduler, type EventBusState, type ScheduledEmission, type EventContract, type PayloadField } from '../src/index.ts'
 
 const emission = (overrides: Partial<ScheduledEmission> = {}): ScheduledEmission => ({
   t: 10, phase: 0, position: 0, source: 'first', type: 'changed', payload: { value: 1 }, ...overrides,
 })
 
 describe('events: DESIGN 2.3', () => {
+  it('rolls back events and counter on transaction failure and retains successful emissions', () => {
+    const bus = new EventBus()
+    bus.emit(emission())
+    const beforeEvents = canonical(bus.since(0)), beforeState = canonical(bus.state())
+    expect(() => transaction([eventsParticipant(bus)], () => {
+      bus.emit(emission({ t: 11 }))
+      throw new Error('failed transaction')
+    })).toThrow('failed transaction')
+    expect(canonical(bus.since(0))).toBe(beforeEvents)
+    expect(canonical(bus.state())).toBe(beforeState)
+    const event = transaction([eventsParticipant(bus)], () => bus.emit(emission()))
+    expect(event.id).toBe('evt.000002')
+    expect(bus.since(1)).toEqual([event])
+  })
+
+  it('provides detached participant snapshots and an optional participant id', () => {
+    const bus = new EventBus()
+    bus.emit(emission())
+    expect(eventsParticipant(bus).id).toBe('events')
+    const participant = eventsParticipant(bus, 'run.events')
+    expect(participant.id).toBe('run.events')
+    const saved = participant.snapshot() as EventBusState
+    ;(saved.records[0].event.payload as { value: number }).value = 99
+    expect(bus.since()[0].payload).toEqual({ value: 1 })
+    participant.restore(saved)
+    ;(saved.records[0].event.payload as { value: number }).value = 100
+    expect(bus.since()[0].payload).toEqual({ value: 99 })
+  })
+
   it('events carry explicit causality and counter-minted evt.NNNNNN ids', () => {
     const bus = new EventBus()
     const first = bus.emit(emission({ cause: 'command.1' }))
