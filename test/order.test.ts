@@ -3,11 +3,13 @@ import { defaultOrder, Order, type ProcessOrder } from '../src/index.ts'
 
 describe('declared process order', () => {
   it('O-default: default data orders fast, cognition, host, settlement, economy, aggregate, record and names engine processes', () => {
-    expect(defaultOrder.phases).toEqual(['fast', 'cognition', 'host', 'day.settlement', 'day.economy', 'aggregate', 'record'])
+    expect(defaultOrder.phases).toEqual(['fast', 'cognition', 'host', 'day.settlement', 'day.economy', 'aggregate', 'record', 'check'])
+    expect(defaultOrder.order.check).toEqual(['kernel.reconcile'])
     expect(defaultOrder.order.record).toEqual([])
     expect(defaultOrder.order.cognition).toEqual([])
     expect(defaultOrder.order.host).toEqual([])
     const order = new Order()
+    expect(order.register('check', 'kernel.reconcile')).toEqual({ phase: 7, position: 0 })
     expect(order.register('fast', 'realism.step')).toEqual({ phase: 0, position: 0 })
     expect(order.register('day.settlement', 'settlement.tick')).toEqual({ phase: 3, position: 0 })
     expect(order.register('day.economy', 'economy.tick')).toEqual({ phase: 4, position: 0 })

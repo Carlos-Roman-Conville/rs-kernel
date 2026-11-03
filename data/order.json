@@ -1,5 +1,5 @@
 {
-  "phases": ["fast", "cognition", "host", "day.settlement", "day.economy", "aggregate", "record"],
+  "phases": ["fast", "cognition", "host", "day.settlement", "day.economy", "aggregate", "record", "check"],
   "order": {
     "fast": ["realism.step"],
     "cognition": [],
@@ -7,6 +7,7 @@
     "day.settlement": ["settlement.tick"],
     "day.economy": ["economy.tick"],
     "aggregate": [],
-    "record": []
+    "record": [],
+    "check": ["kernel.reconcile"]
   }
 }

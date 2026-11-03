@@ -38,6 +38,8 @@ export interface Declaration {
   processes?: { id: string, mechanisms: string[], writes?: string[], reads?: string[] }[]
   ports?: { mechanism: string, quantity: string, kind?: QuantityKind, unit: string | null, direction?: string }[]
   streams?: string[]
+  ledgers?: { id: string; quantities: string[]; reconciled?: boolean }[]
+  boundaries?: { ledger: string; account: string; quantity: string; kind: string }[]
 }
 export interface RegistryData {
   mechanisms: MechanismRow[]
@@ -109,6 +111,32 @@ export function checkRegistry(registry: RegistryData, declarations: Declaration[
     for (const m of d.streams ?? []) named.add(resolve(m))
   }
   const declaredWriters = new Map<string, Set<Declaration>>()
+  const ledgers = new Map<string, { file: string; quantities: Set<string> }>()
+  for (const d of declarations) for (const ledger of d.ledgers ?? []) {
+    const previous = ledgers.get(ledger.id)
+    if (previous) failures.push(`${d.file}: ledger ${ledger.id} declared twice (first in ${previous.file})`)
+    else ledgers.set(ledger.id, { file: d.file, quantities: new Set(ledger.quantities.map(resolve)) })
+  }
+  const boundaries = new Set<string>()
+  for (const d of declarations) for (const boundary of d.boundaries ?? []) {
+    const q = resolve(boundary.quantity)
+    const where = `${d.file}: boundary ${boundary.ledger}/${boundary.account}/${boundary.quantity}`
+    const ledger = ledgers.get(boundary.ledger)
+    if (!ledger) failures.push(`${where} names undeclared ledger ${boundary.ledger}`)
+    const quantity = quantities.get(q)
+    if (!quantity) failures.push(`${where} uses quantity ${boundary.quantity} absent from quantities.json`)
+    else if (ledger && !ledger.quantities.has(q)) failures.push(`${where} uses quantity not declared by ledger ${boundary.ledger}`)
+    if (quantity) {
+      const error = unitError(quantity.unit)
+      if (error) failures.push(`${where} unit ${JSON.stringify(quantity.unit)}: ${error}`)
+    }
+    if (!['source', 'sink', 'transform'].includes(boundary.kind)) {
+      failures.push(`${where} has unknown kind ${JSON.stringify(boundary.kind)}`)
+    }
+    const key = JSON.stringify([boundary.ledger, boundary.account, q])
+    if (boundaries.has(key)) failures.push(`${where} declared twice`)
+    boundaries.add(key)
+  }
   const recordWrite = (q: string, d: Declaration) => {
     if (!declaredWriters.has(q)) declaredWriters.set(q, new Set())
     declaredWriters.get(q)!.add(d)

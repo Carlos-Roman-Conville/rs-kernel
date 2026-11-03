@@ -13,6 +13,74 @@ const registry = (): RegistryData => structuredClone({
 }) as RegistryData
 const declaration = (): Declaration => structuredClone({ file: 'kernel.json', ...kernel }) as Declaration
 
+describe('boundary declarations', () => {
+  const fixture = (): { r: RegistryData; d: Declaration } => ({
+    r: { mechanisms: [], quantities: [{ id: 'mass', unit: 'kg', writer: null }] },
+    d: { file: 'boundary.json', ledgers: [{ id: 'stock', quantities: ['mass'], reconciled: true }],
+      boundaries: ['source', 'sink', 'transform'].map(kind => ({ ledger: 'stock', account: kind, quantity: 'mass', kind })),
+    },
+  })
+
+  it('accepts source, sink and transform accounts', () => {
+    const { r, d } = fixture()
+    expect(checkRegistry(r, [d])).toEqual([])
+  })
+
+  it('finds a ledger in a later declaration and resolves quantity aliases', () => {
+    const { r, d } = fixture()
+    r.aliases = [{ old: 'old-mass', new: 'mass' }]
+    d.boundaries![0].quantity = 'old-mass'
+    expect(checkRegistry(r, [{ file: d.file, boundaries: d.boundaries }, { file: 'ledger.json', ledgers: d.ledgers }])).toEqual([])
+  })
+
+  it('rejects an undeclared ledger', () => {
+    const { r, d } = fixture()
+    d.boundaries![0].ledger = 'missing'
+    expect(checkRegistry(r, [d])).toEqual(['boundary.json: boundary missing/source/mass names undeclared ledger missing'])
+  })
+
+  it('rejects a quantity outside the ledger', () => {
+    const { r, d } = fixture()
+    r.quantities!.push({ id: 'energy', unit: 'J', writer: null })
+    d.boundaries![0].quantity = 'energy'
+    expect(checkRegistry(r, [d])).toEqual(['boundary.json: boundary stock/source/energy uses quantity not declared by ledger stock'])
+  })
+
+  it('rejects a quantity outside the registry vocabulary', () => {
+    const { r, d } = fixture()
+    d.ledgers![0].quantities.push('missing')
+    d.boundaries![0].quantity = 'missing'
+    expect(checkRegistry(r, [d])).toEqual(['boundary.json: boundary stock/source/missing uses quantity missing absent from quantities.json'])
+  })
+
+  it('rejects a boundary quantity with an unparseable registry unit', () => {
+    const { r, d } = fixture()
+    r.quantities![0].unit = 'bogus'
+    d.boundaries = [d.boundaries![0]]
+    expect(checkRegistry(r, [d])).toEqual([expect.stringMatching(/^boundary.json: boundary stock\/source\/mass unit "bogus": /)])
+  })
+
+  it('rejects an unknown boundary kind', () => {
+    const { r, d } = fixture()
+    d.boundaries![0].kind = 'other'
+    expect(checkRegistry(r, [d])).toEqual(['boundary.json: boundary stock/source/mass has unknown kind "other"'])
+  })
+
+  it.each([false, true])('rejects duplicate boundary keys across declarations (alias=%s)', alias => {
+    const { r, d } = fixture()
+    r.aliases = [{ old: 'old-mass', new: 'mass' }]
+    const other: Declaration = { file: 'other.json', boundaries: [{ ...d.boundaries![0], quantity: alias ? 'old-mass' : 'mass', kind: 'sink' }] }
+    expect(checkRegistry(r, [d, other])).toEqual([`other.json: boundary stock/source/${alias ? 'old-mass' : 'mass'} declared twice`])
+  })
+
+  it.each([false, true])('rejects duplicate ledger ids (same declaration=%s)', same => {
+    const { r, d } = fixture()
+    const other: Declaration = { file: 'other.json', ledgers: d.ledgers }
+    if (same) d.ledgers!.push({ ...d.ledgers![0] })
+    expect(checkRegistry(r, same ? [d] : [d, other])).toEqual([`${same ? 'boundary' : 'other'}.json: ledger stock declared twice (first in boundary.json)`])
+  })
+})
+
 describe('checkRegistry', () => {
   it.each([false, true])('keeps live rows when retired aliases follow them (all=%s)', all => {
     const r = registry()
